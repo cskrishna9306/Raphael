@@ -42,17 +42,24 @@ class ParallelClient:
         Constructs an in-depth research prompt for a cinema/television professional.
         """
         prompt = (
-            f"Conduct comprehensive research on the film industry professional: '{name}'.\n"
-            f"Extract detailed information including:\n"
+            f"Conduct factual research on the film industry professional: '{name}'.\n"
+            f"Report only specific, citable facts you can find sources for -- do not offer subjective "
+            f"judgments, sentiment characterizations, or generalized summaries. Extract:\n"
             f"1. Biographical summary and primary roles (e.g. Actor, Director, Writer, DP).\n"
             f"2. Notable filmography / production credits with release years, roles, box office performance, "
-            f"and critical reception.\n"
-            f"3. Key collaborators (actors, directors, cinematographers, writers) they have worked with, "
-            f"the shared projects, and qualitative chemistry/sentiment notes on their working relationships.\n"
-            f"4. Personality profile, working style (e.g. method acting, auteur, collaborative), critical acclaim, "
-            f"major awards, and any notable critiques or controversies.\n"
-            f"5. Casting attributes including demographics, physical characteristics (build, height), "
-            f"and notable screen presence traits."
+            f"and critical reception (e.g. Rotten Tomatoes/Metacritic scores).\n"
+            f"3. Key collaborators (actors, directors, cinematographers, writers) they have worked with, the "
+            f"specific shared projects, and any direct quotes or reported statements specifically about working "
+            f"together (only include if such statements are actually documented).\n"
+            f"4. Documented awards, nominations (with year and project), and any specific, reported controversies "
+            f"tied to a project or date.\n"
+            f"5. Demographics and physical characteristics (age, gender, nationality, build/height), and reported "
+            f"social media follower counts if publicly available.\n"
+            f"6. Announced or reported current/upcoming project commitments with their timeframes, and union/guild "
+            f"affiliation (e.g. SAG-AFTRA, DGA, WGA).\n"
+            f"7. Documented languages/accents performed and trained physical skills (stunts, martial arts, "
+            f"singing, dancing), only where reported in an interview, bio, or credit.\n"
+            f"Leave a field empty rather than guessing or generalizing when no citable source exists."
         )
         if additional_context:
             prompt += f"\nAdditional Context / Specific Focus: {additional_context}"
@@ -138,7 +145,7 @@ class ParallelClient:
                 output=PersonDossier,
                 timeout=t_out,
             )
-            return result.output
+            return result.output.parsed
         except Exception as e:
             print(f"[Parallel] Error during person research on '{name}': {e}")
             return None
@@ -165,7 +172,7 @@ class ParallelClient:
                 output=PersonDossier,
                 timeout=t_out,
             )
-            return result.output
+            return result.output.parsed
         except Exception as e:
             print(f"[Parallel Async] Error during person research on '{name}': {e}")
             return None
