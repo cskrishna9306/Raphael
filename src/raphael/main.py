@@ -1,6 +1,8 @@
 import sys
 import json
+import asyncio
 from src.raphael.parallel.client import ParallelClient
+from src.raphael.clickhouse.handler import ClickHouseHandler
 
 
 def main():
@@ -31,8 +33,17 @@ def main():
         print(f"  Union Affiliation: {', '.join(dossier.availability.union_affiliation) or 'N/A'}")
         print(f"\nSkills: {', '.join(dossier.skills.languages_and_accents + dossier.skills.physical_skills) or 'N/A'}")
         print(f"Social Media Following: {dossier.attributes.social_media_following or 'N/A'}")
+
+        print("\n=== Storing in ClickHouse ===")
+        stored = asyncio.run(_store_in_clickhouse(dossier))
+        print("Stored successfully." if stored else "Failed to store in ClickHouse.")
     else:
         print("No dossier returned or research failed.")
+
+
+async def _store_in_clickhouse(dossier) -> bool:
+    async with ClickHouseHandler() as handler:
+        return await handler.insert_person(dossier)
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ class Config:
         self.CLICKHOUSE_PASSWORD: str = os.getenv("CLICKHOUSE_PASSWORD")
         self.CLICKHOUSE_HOST: str = os.getenv("CLICKHOUSE_HOST")
         self.CLICKHOUSE_PORT: str = str(os.getenv("CLICKHOUSE_PORT"))
+        self.CLICKHOUSE_ALLOW_WRITE_ACCESS: str = os.getenv("CLICKHOUSE_ALLOW_WRITE_ACCESS", "true")
 
         return
 
