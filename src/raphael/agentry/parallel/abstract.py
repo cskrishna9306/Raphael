@@ -4,7 +4,7 @@ from typing import Any
 
 # Import LangChain packages
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_parallel import ParallelSearchTool, ParallelExtractTool
+from langchain_parallel import ParallelSearchTool, ParallelExtractTool, ParallelTaskRunTool
 from langgraph.prebuilt import create_react_agent
 
 # Import custom modules
@@ -13,6 +13,7 @@ from src.raphael.agentry.parallel.models import (
     ParallelAgentType,
     ParallelSearchRequest,
     ParallelExtractRequest,
+    PersonDossier,
 )
 
 class ParallelAbstractAgent(ABC):
@@ -25,7 +26,7 @@ class ParallelAbstractAgent(ABC):
     def __init__(self, system_prompt: str, type: ParallelAgentType):
         """
         Initializes a standalone Parallel sub-agent specializing in
-        either simple searches or extracting webpages.
+        either simple searches, extracting webpages, or deep research.
         """
         # Define this class's state variables
         self.system_prompt = system_prompt
@@ -40,10 +41,15 @@ class ParallelAbstractAgent(ABC):
         )
 
         # Configure specialized parallel tools
-        self.tools = [
-            ParallelSearchTool() if self.type == ParallelAgentType.SEARCH else
-            ParallelExtractTool()
-        ]
+        if self.type == ParallelAgentType.SEARCH:
+            self.tools = [ParallelSearchTool()]
+        elif self.type == ParallelAgentType.EXTRACT:
+            self.tools = [ParallelExtractTool()]
+        elif self.type == ParallelAgentType.RESEARCH:
+            self.tools = [ParallelTaskRunTool(processor="pro-fast", task_output_schema=PersonDossier)]
+        else:
+            self.tools = [ParallelSearchTool()]
+
 
         # Create the agent executor using LangGraph
         self.agent = create_react_agent(

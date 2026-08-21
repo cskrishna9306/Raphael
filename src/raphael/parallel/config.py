@@ -17,11 +17,13 @@ class Config:
         load_dotenv()
 
         # Initialize all the necessary class variables
-        self.PARALLEL_API_KEY: str = os.getenv("PARALLEL_API_KEY")
-        self.PARALLEL_PROCESSOR: str = "base"
-        self.PARALLEL_API_TIMEOUT: str = "60"
+        self.PARALLEL_API_KEY: str | None = os.getenv("PARALLEL_API_KEY")
+        self.PARALLEL_PROCESSOR: str = os.getenv("PARALLEL_PROCESSOR", "base")
+        self.PARALLEL_RESEARCH_PROCESSOR: str = os.getenv("PARALLEL_RESEARCH_PROCESSOR", "pro-fast")
+        self.PARALLEL_API_TIMEOUT: float = float(os.getenv("PARALLEL_API_TIMEOUT", "120"))
 
         return
 
 
 config = Config()
+
