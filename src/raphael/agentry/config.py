@@ -23,6 +23,12 @@ class Config:
         # The Vertex AI model ID to use
         self.MODEL_ID: str = "gemini-3.5-flash-lite"
 
+        # The Vertex AI model ID used by the screenplay breakdown agent
+        # NOTE: Will probably need to use a heavy-weight model for this
+        # since we will be consuming the entire screenplay document and running
+        # inference on top of it
+        self.SCREENPLAY_BREAKDOWN_MODEL_ID: str = "gemini-3.5-flash-lite"
+
         return
 
 
