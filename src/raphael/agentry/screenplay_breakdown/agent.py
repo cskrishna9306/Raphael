@@ -7,7 +7,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Import custom modules
 from src.raphael.agentry.config import config
-from src.raphael.agentry.models import Screenplay
+from src.raphael.agentry.screenplay_breakdown.models import Screenplay
 
 # The system prompt lives alongside this agent
 PROMPT_PATH = Path(__file__).parent / "PROMPT.md"
