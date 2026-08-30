@@ -2,13 +2,19 @@
 from .Gender import Gender
 from .RolePresence import RolePresence
 from .CharacterProfile import CharacterProfile
+from .CastingCandidate import CastingCandidate
 from .Cast import Cast
+from .CastingCharacter import CastingCharacter
+from .CastingReport import CastingReport
 from .Screenplay import Screenplay
 
 __all__ = [
-    "Screenplay",
     "Gender",
     "RolePresence",
     "CharacterProfile",
+    "CastingCandidate",
     "Cast",
+    "CastingCharacter",
+    "CastingReport",
+    "Screenplay",
 ]
