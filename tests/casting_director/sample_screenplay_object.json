@@ -1,0 +1,70 @@
+{
+  "title": "Night of the Living Dead",
+  "cast": {
+    "characters": [
+      {
+        "name": "Ben",
+        "aliases": null,
+        "role_presence": "lead",
+        "gender": "male",
+        "age_range": "30s",
+        "description": "A resourceful traveler who takes charge of barricading the farmhouse against the ghouls outside.",
+        "traits": ["resourceful", "assertive", "protective"]
+      },
+      {
+        "name": "Barbara",
+        "aliases": null,
+        "role_presence": "lead",
+        "gender": "female",
+        "age_range": "20s",
+        "description": "A young woman traumatized after witnessing her brother's death at the cemetery, retreating into shock as the night worsens.",
+        "traits": ["shaken", "withdrawn", "fragile"]
+      },
+      {
+        "name": "Harry Cooper",
+        "aliases": null,
+        "role_presence": "supporting",
+        "gender": "male",
+        "age_range": "40s",
+        "description": "A gruff, self-interested father hiding in the cellar with his family, who clashes with Ben over how to survive the night.",
+        "traits": ["stubborn", "abrasive", "fearful"]
+      },
+      {
+        "name": "Helen Cooper",
+        "aliases": null,
+        "role_presence": "supporting",
+        "gender": "female",
+        "age_range": "30s",
+        "description": "Harry's wife, more level-headed than her husband, torn between loyalty to him and doing what's reasonable for the group.",
+        "traits": ["pragmatic", "weary", "loyal"]
+      },
+      {
+        "name": "Tom",
+        "aliases": null,
+        "role_presence": "supporting",
+        "gender": "male",
+        "age_range": "20s",
+        "description": "A young man dating Judy who volunteers to help siphon gas for an escape attempt.",
+        "traits": ["eager", "brave", "naive"]
+      },
+      {
+        "name": "Judy",
+        "aliases": null,
+        "role_presence": "minor",
+        "gender": "female",
+        "age_range": "20s",
+        "description": "Tom's girlfriend, reluctant to be separated from him during the escape attempt.",
+        "traits": ["anxious", "devoted"]
+      },
+      {
+        "name": "Karen Cooper",
+        "aliases": null,
+        "role_presence": "minor",
+        "gender": "female",
+        "age_range": "8-10",
+        "description": "Harry and Helen's daughter, bitten earlier in the night and steadily growing worse in the cellar.",
+        "traits": ["ill", "frightened"]
+      }
+    ]
+  }
+}
