@@ -8,16 +8,13 @@ from langgraph.types import Send
 
 # Import custom modules
 from src.raphael.agentry.config import config
-from src.raphael.agentry.models import (
-    Screenplay,
-    CharacterProfile,
-    CastingCandidate,
-    CastingCharacter,
-    CastingReport,
-)
+from src.raphael.agentry.screenplay_breakdown.models import Screenplay, CharacterProfile
 from src.raphael.agentry.parallel.abstract import ParallelAbstractAgent
 from src.raphael.agentry.parallel.models import ParallelAgentType, PersonDossier
 from src.raphael.agentry.casting_director.models import (
+    CastingCandidate,
+    CastingCharacter,
+    CastingReport,
     CastingDirectorState,
     CharacterSearchState,
     CandidateSearchResult,

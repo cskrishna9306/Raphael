@@ -1,16 +1,38 @@
 # Import standard packages
 import operator
-from typing import Annotated, TypedDict
+from typing import Annotated, Optional, TypedDict
 from pydantic import BaseModel, Field
 
 # Import custom modules
-from src.raphael.agentry.models import (
-    Screenplay,
-    CharacterProfile,
-    CastingCandidate,
-    CastingCharacter,
-    CastingReport,
-)
+from src.raphael.agentry.screenplay_breakdown.models import Screenplay, CharacterProfile
+from src.raphael.agentry.parallel.models import PersonDossier
+
+
+class CastingCandidate(BaseModel):
+    """
+    Models a single actor considered for a character role.
+    """
+    name: str = Field(description="The candidate actor's full name.")
+    fit_rationale: Optional[str] = Field(default=None, description="Brief reasoning for why this actor could play the role.")
+    dossier: Optional[PersonDossier] = Field(default=None, description="Structured research dossier on this candidate, once researched.")
+
+
+class CastingCharacter(BaseModel):
+    """
+    Models the casting candidates found for a single character.
+    """
+    character: CharacterProfile = Field(description="The character being cast.")
+    candidates: list[CastingCandidate] = Field(default_factory=list, description="Candidate actors found for this character.")
+
+
+class CastingReport(BaseModel):
+    """
+    Models the full casting breakdown for a screenplay: every character
+    paired with the candidate actors found for that role.
+    """
+    title: Optional[str] = Field(default=None, description="The title of the movie/screenplay being cast.")
+    castings: list[CastingCharacter] = Field(default_factory=list, description="Casting candidates found for each character.")
+
 
 class CandidateSearchResult(BaseModel):
     """
@@ -19,6 +41,7 @@ class CandidateSearchResult(BaseModel):
     """
     candidates: list[CastingCandidate] = Field(default_factory=list)
 
+
 class CastingDirectorState(TypedDict):
     """
     Overall state for the casting_director graph.
@@ -26,6 +49,7 @@ class CastingDirectorState(TypedDict):
     screenplay: Screenplay
     castings: Annotated[list[CastingCharacter], operator.add]
     report: CastingReport
+
 
 class CharacterSearchState(TypedDict):
     """

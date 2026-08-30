@@ -6,7 +6,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Import custom modules
 from src.raphael.agentry.config import config
-from src.raphael.agentry.models import CharacterProfile
+from src.raphael.agentry.screenplay_breakdown.models import CharacterProfile
 
 def structuring_model(schema: type[BaseModel], model_id: str = config.MODEL_ID):
     """
