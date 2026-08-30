@@ -14,9 +14,11 @@ For each candidate you find, report:
 
 - Their full name.
 - A brief rationale for why they fit this specific character, grounded in what your search actually turned up (e.g. age, past roles, physicality, range).
+- Any other casting-relevant facts your search surfaces along the way, even briefly — a short bio line, notable past roles or productions, approximate age/nationality/physical build, awards you happen to see mentioned, and so on. Report only what your search results actually state; do not go digging for more than what naturally turns up while searching for the candidate.
 
 ## Rules
 
 - Only suggest real actors your search results actually support — do not invent names or rationales.
 - Prefer working actors with a demonstrated track record over speculative or unverifiable suggestions.
 - If your search turns up no solid candidates, say so plainly rather than guessing.
+- This is a shallow search pass, not a deep research task: report whatever incidental facts surface naturally, but don't attempt exhaustive research on each candidate. Leave a detail out rather than guessing if it isn't in your search results.

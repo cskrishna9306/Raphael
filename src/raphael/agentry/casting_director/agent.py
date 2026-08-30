@@ -10,7 +10,9 @@ from langgraph.types import Send
 from src.raphael.agentry.config import config
 from src.raphael.agentry.screenplay_breakdown.models import Screenplay, CharacterProfile
 from src.raphael.agentry.parallel.abstract import ParallelAbstractAgent
-from src.raphael.agentry.parallel.models import ParallelAgentType, PersonDossier
+from src.raphael.agentry.parallel.models import ParallelAgentType
+# PersonDossier import dropped -- only referenced by the commented-out
+# enrich_candidate below; re-add it alongside re-enabling that method.
 from src.raphael.agentry.casting_director.models import (
     CastingCandidate,
     CastingCharacter,
@@ -28,12 +30,14 @@ RESEARCH_PROMPT = (Path(__file__).parent / "RESEARCH_PROMPT.md").read_text()
 class CastingDirectorAgent:
     """
     Given a screenplay's cast breakdown, fans out a parallel candidate
-    search + dossier research per character and returns a CastingReport.
+    search per character and returns a CastingReport. Each candidate's
+    dossier is prefilled best-effort from search findings alone -- no
+    separate deep-research call (see find_candidates/enrich_candidate).
 
     search_candidates (and everything it calls) is async-only: every
-    character branch, and every candidate's dossier research within a
-    branch, needs to run concurrently. Because of that this graph can only
-    be *driven* through ainvoke()/astream() -- see invoke()'s docstring.
+    character branch needs to run concurrently. Because of that this graph
+    can only be *driven* through ainvoke()/astream() -- see invoke()'s
+    docstring.
     """
 
     def __init__(self):
@@ -42,13 +46,19 @@ class CastingDirectorAgent:
         per character search for and research candidates, then reduce into
         a CastingReport.
 
-        The Parallel search and research sub-agents are built once here and
-        reused across every character branch and every candidate -- their
-        system prompts are fixed, so there's nothing per-call to rebuild.
+        The Parallel search sub-agent is built once here and reused across
+        every character branch -- its system prompt is fixed, so there's
+        nothing per-call to rebuild.
+
+        The Parallel research sub-agent is disabled for now (see
+        enrich_candidate) -- find_candidates prefills whatever dossier
+        fields it can straight from search findings instead. Left commented
+        out, not deleted, so deep-research enrichment is a one-line revert
+        away if we want it back.
         """
-        # Instantiate the 2 Parallel sub-agents
+        # Instantiate the Parallel sub-agent(s)
         self.search_agent = ParallelAbstractAgent(system_prompt=SEARCH_PROMPT, type=ParallelAgentType.SEARCH)
-        self.research_agent = ParallelAbstractAgent(system_prompt=RESEARCH_PROMPT, type=ParallelAgentType.RESEARCH)
+        # self.research_agent = ParallelAbstractAgent(system_prompt=RESEARCH_PROMPT, type=ParallelAgentType.RESEARCH)
 
         # Initialize the graph and its nodes
         graph = StateGraph(CastingDirectorState)
@@ -88,50 +98,60 @@ class CastingDirectorAgent:
     async def find_candidates(self, character: CharacterProfile) -> list[CastingCandidate]:
         """
         Searches for real actors who could plausibly play a character, and
-        structures the findings into name + fit rationale (no dossier yet).
+        structures the findings into name + fit rationale + a best-effort
+        dossier prefilled from whatever the search findings happen to
+        surface (no deep research call -- see enrich_candidate).
         """
         findings = await self.search_agent.ainvoke(character_query(character))
 
         result: CandidateSearchResult = await structuring_model(CandidateSearchResult, config.CASTING_DIRECTOR_MODEL_ID).ainvoke(
-            f"Extract the candidate actors -- name and fit rationale only, no "
-            f"dossier -- from these casting search findings for the character "
-            f"{character.name}:\n\n{findings}"
+            f"Extract the candidate actors from these casting search findings "
+            f"for the character {character.name}: their name, a fit rationale, "
+            f"and a dossier prefilled with whatever casting-relevant facts "
+            f"(bio, notable roles, age/nationality/build, etc.) the findings "
+            f"happen to mention. Leave dossier fields unset rather than "
+            f"guessing if the findings don't support them -- this is a "
+            f"best-effort prefill from search, not deep research.\n\n{findings}"
         )
 
         return result.candidates
 
-    async def enrich_candidate(self, candidate: CastingCandidate) -> CastingCandidate:
-        """
-        Runs Parallel's deep-research task on a single candidate to ground
-        their dossier in real, citable facts.
-        """
-        findings = await self.research_agent.ainvoke(f"Compile a casting dossier on {candidate.name}.")
-
-        dossier: PersonDossier = await structuring_model(PersonDossier, config.CASTING_DIRECTOR_MODEL_ID).ainvoke(
-            f"Extract {candidate.name}'s casting dossier from this research:\n\n{findings}"
-        )
-
-        return candidate.model_copy(update={"dossier": dossier})
+    # Deep-research enrichment is disabled -- find_candidates prefills each
+    # candidate's dossier from search findings alone instead (see above).
+    # Left commented out, not deleted, since it depends on self.research_agent
+    # (also disabled in __init__); re-enable both together to restore it.
+    #
+    # async def enrich_candidate(self, candidate: CastingCandidate) -> CastingCandidate:
+    #     """
+    #     Runs Parallel's deep-research task on a single candidate to ground
+    #     their dossier in real, citable facts.
+    #     """
+    #     findings = await self.research_agent.ainvoke(f"Compile a casting dossier on {candidate.name}.")
+    #
+    #     dossier: PersonDossier = await structuring_model(PersonDossier, config.CASTING_DIRECTOR_MODEL_ID).ainvoke(
+    #         f"Extract {candidate.name}'s casting dossier from this research:\n\n{findings}"
+    #     )
+    #
+    #     return candidate.model_copy(update={"dossier": dossier})
 
     async def search_candidates(self, state: CharacterSearchState) -> dict:
         """
-        Finds candidates for a single character, then researches every
-        candidate's dossier concurrently via asyncio.gather.
+        Finds candidates for a single character, each with a best-effort
+        dossier already prefilled from search alone.
         """
         character = state["character"]
         candidates = await self.find_candidates(character)
 
-        # Perform deep research analysis on each candidate concurrently!
-        # Most time-intensive part
-        enriched_candidates = await asyncio.gather(
-            *(self.enrich_candidate(candidate) for candidate in candidates)
-        )
+        # Deep-research enrichment disabled -- see enrich_candidate above.
+        # enriched_candidates = await asyncio.gather(
+        #     *(self.enrich_candidate(candidate) for candidate in candidates)
+        # )
 
         return {
             "castings": [
                 CastingCharacter(
                     character=character,
-                    candidates=list(enriched_candidates)
+                    candidates=candidates
                 )
             ]
         }
