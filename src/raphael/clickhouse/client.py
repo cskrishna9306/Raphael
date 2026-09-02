@@ -35,10 +35,11 @@ class ClickHouseClient:
             ],
             env={
                 "CLICKHOUSE_HOST": config.CLICKHOUSE_HOST,
-                "CLICKHOUSE_PORT": config.CLICKHOUSE_PORT,   
+                "CLICKHOUSE_PORT": config.CLICKHOUSE_PORT,
                 "CLICKHOUSE_USER": config.CLICKHOUSE_USERNAME,
                 "CLICKHOUSE_PASSWORD": config.CLICKHOUSE_PASSWORD,
                 "CLICKHOUSE_SECURE": "true",
+                "CLICKHOUSE_ALLOW_WRITE_ACCESS": config.CLICKHOUSE_ALLOW_WRITE_ACCESS,
                 **os.environ # Continues to carry your GOOGLE_API_KEY to Gemini
             }
         )

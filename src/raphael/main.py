@@ -1,9 +1,14 @@
 import sys
 import json
+import asyncio
 from src.raphael.parallel.client import ParallelClient
+from src.raphael.clickhouse.handler import ClickHouseHandler
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "roster":
+        return asyncio.run(_search_roster_demo(sys.argv[2:]))
+
     target = sys.argv[1] if len(sys.argv) > 1 else "Christopher Nolan"
     print(f"=== Raphael: Researching '{target}' via Parallel ===")
     
@@ -31,8 +36,32 @@ def main():
         print(f"  Union Affiliation: {', '.join(dossier.availability.union_affiliation) or 'N/A'}")
         print(f"\nSkills: {', '.join(dossier.skills.languages_and_accents + dossier.skills.physical_skills) or 'N/A'}")
         print(f"Social Media Following: {dossier.attributes.social_media_following or 'N/A'}")
+
+        print("\n=== Storing in ClickHouse ===")
+        stored = asyncio.run(_store_in_clickhouse(dossier))
+        print("Stored successfully." if stored else "Failed to store in ClickHouse.")
     else:
         print("No dossier returned or research failed.")
+
+
+async def _store_in_clickhouse(dossier) -> bool:
+    async with ClickHouseHandler() as handler:
+        return await handler.insert_person(dossier)
+
+
+async def _search_roster_demo(current_picks: list[str]) -> None:
+    """
+    Manual smoke test for search_roster:
+        uv run python -m src.raphael.main roster "Christopher Nolan" "Cillian Murphy"
+    """
+    print(f"=== Raphael: Roster search favoring {current_picks or '(none picked yet)'} ===")
+    async with ClickHouseHandler() as handler:
+        result = await handler.search_roster(
+            criteria={"primary_roles": ["Actor"]},
+            current_picks=current_picks,
+            limit=10,
+        )
+    print(result if result is not None else "Query failed or ClickHouse unreachable (check .env credentials).")
 
 
 if __name__ == "__main__":
