@@ -9,6 +9,9 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "roster":
         return asyncio.run(_search_roster_demo(sys.argv[2:]))
 
+    if len(sys.argv) > 1 and sys.argv[1] == "add-person":
+        return asyncio.run(_add_person_demo(sys.argv[2:]))
+
     target = sys.argv[1] if len(sys.argv) > 1 else "Christopher Nolan"
     print(f"=== Raphael: Researching '{target}' via Parallel ===")
     
@@ -62,6 +65,32 @@ async def _search_roster_demo(current_picks: list[str]) -> None:
             limit=10,
         )
     print(result if result is not None else "Query failed or ClickHouse unreachable (check .env credentials).")
+
+
+async def _add_person_demo(args: list[str]) -> None:
+    """
+    Manual smoke test for find_or_research_person -- also demonstrates the
+    looked-up person joining the current roster in the same run:
+        uv run python -m src.raphael.main add-person "Some Name" "Christopher Nolan"
+    """
+    if not args:
+        print("Usage: add-person <name> [current_pick ...]")
+        return
+    name, current_picks = args[0], args[1:]
+
+    print(f"=== Raphael: Looking up '{name}' (research on demand if new) ===")
+    parallel_client = ParallelClient()
+    async with ClickHouseHandler() as handler:
+        person = await handler.find_or_research_person(parallel_client, name)
+        if person is None:
+            print("Lookup/research/storage failed -- check .env credentials and Parallel API key.")
+            return
+        print(person)
+
+        updated_picks = current_picks + [name]
+        print(f"\n=== Roster search now favoring {updated_picks} ===")
+        result = await handler.search_roster(current_picks=updated_picks, limit=10)
+    print(result if result is not None else "Roster query failed.")
 
 
 if __name__ == "__main__":

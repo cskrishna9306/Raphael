@@ -5,6 +5,7 @@ from typing import Any, Optional, Union
 # Import custom packages
 from src.raphael.clickhouse.client import ClickHouseClient
 from src.raphael.agentry.parallel.models import PersonDossier
+from src.raphael.parallel.client import ParallelClient
 
 
 _ARRAY_COLUMNS = {
@@ -271,7 +272,7 @@ class ClickHouseHandler:
                 box_office Nullable(String),
                 critical_reception Nullable(String),
                 key_collaborators Array(String)
-            ) ENGINE = MergeTree ORDER BY (person, year)
+            ) ENGINE = MergeTree ORDER BY (person, title)
             """
         )
         await self._run_query(
@@ -372,6 +373,43 @@ class ClickHouseHandler:
         """
         await self.ensure_schema()
         return await self._run_query(f"SELECT * FROM people WHERE name = {_sql_str(name)} LIMIT 1")
+
+    async def find_or_research_person(
+        self,
+        parallel_client: ParallelClient,
+        name: str,
+        additional_context: Optional[str] = None,
+    ) -> Optional[Any]:
+        """
+        Look up `name` in the researched-people corpus; if not already there (after
+        name-variant canonicalization), research them live via Parallel and save them
+        through the exact same insert_person path batch research uses. Always returns
+        the stored people-table row (freshly researched or pre-existing), or None if
+        lookup/research/storage failed.
+
+        Known limitation, accepted for MVP: if `name` is already stored, the existing
+        record is returned as-is -- this never re-researches/refreshes an existing
+        person. ClickHouse's MergeTree tables have no upsert, so inserting a refreshed
+        dossier for someone already stored would add a second row for the same
+        canonical name rather than replace the first.
+        """
+        await self.ensure_schema()
+        existing_names = await self._fetch_existing_names()
+        canonical_name = _resolve_canonical_name(name, existing_names)
+
+        existing = await self.get_person(canonical_name)
+        if _extract_column(existing, "name"):
+            return existing
+
+        dossier = await parallel_client.aresearch_person(name, additional_context=additional_context)
+        if dossier is None:
+            return None
+
+        stored = await self.insert_person(dossier)
+        if not stored:
+            return None
+
+        return await self.get_person(dossier.name)
 
     async def search_people(self, **criteria: Union[str, int, list]) -> Optional[Any]:
         """
