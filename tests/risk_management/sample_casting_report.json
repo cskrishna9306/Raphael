@@ -1,0 +1,151 @@
+{
+  "title": "Night of the Living Dead (2026 Remake)",
+  "castings": [
+    {
+      "character": {
+        "name": "Ben",
+        "role_presence": "lead",
+        "gender": "male",
+        "age_range": "20s-30s",
+        "description": "A resourceful traveler who takes charge of barricading the farmhouse against the ghouls outside.",
+        "traits": ["resourceful", "assertive", "protective"]
+      },
+      "candidates": [
+        {
+          "name": "Timothée Chalamet",
+          "fit_rationale": "Proven leading-man range and box-office draw for a genre remake anchor.",
+          "dossier": {
+            "name": "Timothée Chalamet",
+            "filmography": [
+              {"title": "Dune", "year": 2021, "role": "Actor", "character_or_contribution": "Paul Atreides", "key_collaborators": ["Zendaya", "Josh Brolin"]},
+              {"title": "Dune: Part Two", "year": 2024, "role": "Actor", "character_or_contribution": "Paul Atreides", "key_collaborators": ["Zendaya", "Josh Brolin", "Florence Pugh"]}
+            ],
+            "collaborators": [
+              {"name": "Zendaya", "role": "Actor", "shared_projects": ["Dune", "Dune: Part Two"]},
+              {"name": "Josh Brolin", "role": "Actor", "shared_projects": ["Dune", "Dune: Part Two"]}
+            ]
+          }
+        },
+        {
+          "name": "Idris Elba",
+          "fit_rationale": "Commanding physical presence well suited to a siege-survival lead.",
+          "dossier": {
+            "name": "Idris Elba",
+            "filmography": [
+              {"title": "Beast", "year": 2022, "role": "Actor", "character_or_contribution": "Dr. Nate Samuels", "key_collaborators": []},
+              {"title": "Luther: The Fallen Sun", "year": 2023, "role": "Actor", "character_or_contribution": "John Luther", "key_collaborators": []}
+            ],
+            "collaborators": []
+          }
+        }
+      ]
+    },
+    {
+      "character": {
+        "name": "Barbara",
+        "role_presence": "lead",
+        "gender": "female",
+        "age_range": "20s",
+        "description": "A young woman traumatized after witnessing her brother's death at the cemetery, retreating into shock as the night worsens.",
+        "traits": ["shaken", "withdrawn", "fragile"]
+      },
+      "candidates": [
+        {
+          "name": "Zendaya",
+          "fit_rationale": "Demonstrated range carrying emotionally intense genre material.",
+          "dossier": {
+            "name": "Zendaya",
+            "filmography": [
+              {"title": "Dune", "year": 2021, "role": "Actor", "character_or_contribution": "Chani", "key_collaborators": ["Timothée Chalamet", "Josh Brolin"]},
+              {"title": "Dune: Part Two", "year": 2024, "role": "Actor", "character_or_contribution": "Chani", "key_collaborators": ["Timothée Chalamet", "Josh Brolin", "Florence Pugh"]}
+            ],
+            "collaborators": [
+              {"name": "Timothée Chalamet", "role": "Actor", "shared_projects": ["Dune", "Dune: Part Two"]}
+            ]
+          }
+        },
+        {
+          "name": "Florence Pugh",
+          "fit_rationale": "Strong track record anchoring horror/survival ensembles.",
+          "dossier": {
+            "name": "Florence Pugh",
+            "filmography": [
+              {"title": "Dune: Part Two", "year": 2024, "role": "Actor", "character_or_contribution": "Princess Irulan", "key_collaborators": ["Timothée Chalamet", "Zendaya"]}
+            ],
+            "collaborators": [
+              {"name": "Timothée Chalamet", "role": "Actor", "shared_projects": ["Dune: Part Two"]}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "character": {
+        "name": "Harry Cooper",
+        "role_presence": "supporting",
+        "gender": "male",
+        "age_range": "40s",
+        "description": "A gruff, self-interested father hiding in the cellar with his family, who clashes with Ben over how to survive the night.",
+        "traits": ["stubborn", "abrasive", "fearful"]
+      },
+      "candidates": [
+        {
+          "name": "Josh Brolin",
+          "fit_rationale": "Reliable at playing gruff, abrasive authority figures in ensemble casts.",
+          "dossier": {
+            "name": "Josh Brolin",
+            "filmography": [
+              {"title": "Dune", "year": 2021, "role": "Actor", "character_or_contribution": "Gurney Halleck", "key_collaborators": ["Timothée Chalamet", "Zendaya"]},
+              {"title": "Dune: Part Two", "year": 2024, "role": "Actor", "character_or_contribution": "Gurney Halleck", "key_collaborators": ["Timothée Chalamet", "Zendaya"]}
+            ],
+            "collaborators": [
+              {"name": "Timothée Chalamet", "role": "Actor", "shared_projects": ["Dune", "Dune: Part Two"]},
+              {"name": "Zendaya", "role": "Actor", "shared_projects": ["Dune", "Dune: Part Two"]}
+            ]
+          }
+        },
+        {
+          "name": "Michael B. Jordan",
+          "fit_rationale": "Strong dramatic presence for a family patriarch under pressure.",
+          "dossier": {
+            "name": "Michael B. Jordan",
+            "filmography": [
+              {"title": "Creed III", "year": 2023, "role": "Actor", "character_or_contribution": "Adonis Creed", "key_collaborators": ["Jonathan Majors"]},
+              {"title": "Black Panther", "year": 2018, "role": "Actor", "character_or_contribution": "Erik Killmonger", "key_collaborators": []}
+            ],
+            "collaborators": [
+              {"name": "Jonathan Majors", "role": "Actor", "shared_projects": ["Creed III"]}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "character": {
+        "name": "Tom",
+        "role_presence": "supporting",
+        "gender": "male",
+        "age_range": "20s",
+        "description": "A pragmatic young man sheltering in the cellar, willing to compromise to keep the group alive.",
+        "traits": ["pragmatic", "loyal", "anxious"]
+      },
+      "candidates": [
+        {
+          "name": "Josh Brolin",
+          "fit_rationale": "Also considered here as an against-type stretch for a younger-skewing supporting role.",
+          "dossier": {
+            "name": "Josh Brolin",
+            "filmography": [
+              {"title": "Dune", "year": 2021, "role": "Actor", "character_or_contribution": "Gurney Halleck", "key_collaborators": ["Timothée Chalamet", "Zendaya"]},
+              {"title": "Dune: Part Two", "year": 2024, "role": "Actor", "character_or_contribution": "Gurney Halleck", "key_collaborators": ["Timothée Chalamet", "Zendaya"]}
+            ],
+            "collaborators": [
+              {"name": "Timothée Chalamet", "role": "Actor", "shared_projects": ["Dune", "Dune: Part Two"]},
+              {"name": "Zendaya", "role": "Actor", "shared_projects": ["Dune", "Dune: Part Two"]}
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
