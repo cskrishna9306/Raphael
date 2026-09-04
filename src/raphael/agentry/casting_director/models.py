@@ -33,6 +33,19 @@ class CastingReport(BaseModel):
     title: Optional[str] = Field(default=None, description="The title of the movie/screenplay being cast.")
     castings: list[CastingCharacter] = Field(default_factory=list, description="Casting candidates found for each character.")
 
+    def unique_candidates(self) -> dict[str, "CastingCandidate"]:
+        """
+        First-seen dedup of candidates across every character -- the same
+        actor can be shortlisted for more than one role. Shared by
+        ChemistryEngine (graph nodes) and RiskManagementAgent (fan-out) so
+        both walk the same unique-candidate set the same way.
+        """
+        seen: dict[str, CastingCandidate] = {}
+        for casting in self.castings:
+            for candidate in casting.candidates:
+                seen.setdefault(candidate.name, candidate)
+        return seen
+
 
 class CandidateSearchResult(BaseModel):
     """

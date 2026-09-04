@@ -32,6 +32,9 @@ class Config:
         # The Vertex AI model ID used by the casting_director agent
         self.CASTING_DIRECTOR_MODEL_ID: str = "gemini-3.5-flash-lite"
 
+        # The Vertex AI model ID used by the risk_management agent
+        self.RISK_MANAGEMENT_MODEL_ID: str = "gemini-3.5-flash-lite"
+
         return
 
 
