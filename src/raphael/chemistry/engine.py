@@ -14,7 +14,7 @@ from src.raphael.chemistry.models import (
     CastingCluster,
     ChemistryReport,
 )
-from src.raphael.agentry.casting_director.models import CastingReport, CastingCandidate
+from src.raphael.agentry.casting_director.models import CastingReport
 
 
 class ChemistryEngine:
@@ -28,7 +28,7 @@ class ChemistryEngine:
 
     def build_graph(self, report: CastingReport) -> ChemistryGraph:
         """Builds and scores the collaboration graph over every unique candidate in `report`."""
-        candidates = self._unique_candidates(report)
+        candidates = report.unique_candidates()
 
         total_credits = {
             name: len({normalize_name(item.title) for item in c.dossier.filmography}) if c.dossier else 0
@@ -93,14 +93,6 @@ class ChemistryEngine:
             )
             for assignment, score in ranked
         ]
-
-    def _unique_candidates(self, report: CastingReport) -> dict[str, CastingCandidate]:
-        """First-seen dedup of candidates across every character -- the same actor can be shortlisted for more than one role."""
-        seen: dict[str, CastingCandidate] = {}
-        for casting in report.castings:
-            for candidate in casting.candidates:
-                seen.setdefault(candidate.name, candidate)
-        return seen
 
     def _shaped_score(self, assignment, candidate_lists, edge_weight) -> float:
         """Team-search objective: pairwise chemistry sum, penalized for over-consolidated pair density. -inf if an actor is double-booked across characters."""
