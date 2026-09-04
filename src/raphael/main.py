@@ -3,6 +3,7 @@ import json
 import asyncio
 from src.raphael.parallel.client import ParallelClient
 from src.raphael.clickhouse.handler import ClickHouseHandler
+from src.raphael.tmdb.client import TMDBClient
 
 
 def main():
@@ -11,6 +12,9 @@ def main():
 
     if len(sys.argv) > 1 and sys.argv[1] == "add-person":
         return asyncio.run(_add_person_demo(sys.argv[2:]))
+
+    if len(sys.argv) > 1 and sys.argv[1] == "movie-cast":
+        return asyncio.run(_movie_cast_demo(sys.argv[2:]))
 
     target = sys.argv[1] if len(sys.argv) > 1 else "Christopher Nolan"
     print(f"=== Raphael: Researching '{target}' via Parallel ===")
@@ -91,6 +95,43 @@ async def _add_person_demo(args: list[str]) -> None:
         print(f"\n=== Roster search now favoring {updated_picks} ===")
         result = await handler.search_roster(current_picks=updated_picks, limit=10)
     print(result if result is not None else "Roster query failed.")
+
+
+async def _movie_cast_demo(args: list[str]) -> None:
+    """
+    Manual smoke test: pull a movie's cast/crew from TMDB and research each cast
+    member through the existing find_or_research_person path.
+        uv run python -m src.raphael.main movie-cast "Inception" --limit 3
+    """
+    if not args:
+        print("Usage: movie-cast <title> [--limit N]")
+        return
+    limit = None
+    if "--limit" in args:
+        idx = args.index("--limit")
+        limit = int(args[idx + 1])
+        args = args[:idx]
+    title = " ".join(args)
+
+    print(f"=== Raphael: Pulling cast/crew for '{title}' via TMDB ===")
+    tmdb_client = TMDBClient()
+    credits = await tmdb_client.find_movie_credits(title)
+    if credits is None:
+        print(f"No TMDB match found for '{title}' (check TMDB_API_KEY / spelling).")
+        return
+
+    cast_names = [member.name for member in credits.cast]
+    crew_names = [member.name for member in credits.crew]
+    print(f"Cast ({len(cast_names)}): {cast_names}")
+    print(f"Crew ({len(crew_names)}, not auto-researched -- MVP is actors-only): {crew_names}")
+
+    to_research = cast_names[:limit] if limit else cast_names
+    parallel_client = ParallelClient()
+    async with ClickHouseHandler() as handler:
+        for name in to_research:
+            print(f"\n--- {name} ---")
+            person = await handler.find_or_research_person(parallel_client, name)
+            print(person if person is not None else "Lookup/research/storage failed.")
 
 
 if __name__ == "__main__":
