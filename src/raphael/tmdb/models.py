@@ -18,6 +18,7 @@ class CastMember(BaseModel):
     name: str = Field(description="Actor's name")
     character: Optional[str] = Field(default=None, description="Character name portrayed")
     order: Optional[int] = Field(default=None, description="Billing order")
+    profile_path: Optional[str] = Field(default=None, description="Path fragment for a headshot image, relative to TMDB's image CDN")
 
 
 class CrewMember(BaseModel):

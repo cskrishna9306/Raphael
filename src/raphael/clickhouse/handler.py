@@ -4,7 +4,15 @@ from typing import Any, Optional, Union
 
 # Import custom packages
 from src.raphael.clickhouse.client import ClickHouseClient
-from src.raphael.agentry.parallel.models import PersonDossier
+from src.raphael.agentry.parallel.models import (
+    PersonDossier,
+    FilmographyItem,
+    CollaboratorCredit,
+    Recognition,
+    CastingAttributes,
+    Availability,
+    Skills,
+)
 from src.raphael.parallel.client import ParallelClient
 
 
@@ -96,11 +104,11 @@ def _resolve_canonical_names(names: list[str], existing_names: list[str]) -> lis
     return [_resolve_canonical_name(name, existing_names) for name in names]
 
 
-def _extract_column(result: Optional[Any], column: str) -> list[str]:
+def _extract_rows(result: Optional[Any]) -> list[dict[str, Any]]:
     """
-    Pull one column's values out of a raw _run_query result (a JSON payload
-    {"columns": [...], "rows": [[...], ...]}, possibly wrapped in a list of MCP
-    content blocks). Never raises -- returns [] if unparseable/missing.
+    Parse a raw _run_query result (a JSON payload {"columns": [...], "rows": [[...], ...]},
+    possibly wrapped in a list of MCP content blocks) into a list of column-name-keyed
+    dicts, one per row. Never raises -- returns [] if unparseable/missing.
     """
     text = result
     if isinstance(text, list):
@@ -112,10 +120,18 @@ def _extract_column(result: Optional[Any], column: str) -> list[str]:
         return []
     try:
         payload = json.loads(text)
-        idx = payload["columns"].index(column)
-        return [row[idx] for row in payload["rows"] if idx < len(row) and row[idx] is not None]
+        columns = payload["columns"]
+        return [dict(zip(columns, row)) for row in payload["rows"]]
     except (json.JSONDecodeError, KeyError, ValueError, TypeError):
         return []
+
+
+def _extract_column(result: Optional[Any], column: str) -> list[str]:
+    """
+    Pull one column's values out of a raw _run_query result. Never raises --
+    returns [] if unparseable/missing.
+    """
+    return [row[column] for row in _extract_rows(result) if row.get(column) is not None]
 
 
 def _criteria_clause(column: str, value: Union[str, int, list]) -> str:
@@ -373,6 +389,78 @@ class ClickHouseHandler:
         """
         await self.ensure_schema()
         return await self._run_query(f"SELECT * FROM people WHERE name = {_sql_str(name)} LIMIT 1")
+
+    async def get_person_dossier(self, name: str) -> Optional[PersonDossier]:
+        """
+        Reconstruct a full PersonDossier for `name` by joining people/credits/
+        collaborations back together -- unlike get_person (a flat people row only),
+        this is what callers needing filmography/collaborators (e.g. the chemistry
+        engine) should use. Returns None if the person isn't stored.
+        """
+        await self.ensure_schema()
+        existing_names = await self._fetch_existing_names()
+        canonical_name = _resolve_canonical_name(name, existing_names)
+
+        person_rows = _extract_rows(await self.get_person(canonical_name))
+        if not person_rows:
+            return None
+        person = person_rows[0]
+
+        credits_result = await self._run_query(
+            f"SELECT * FROM credits WHERE person = {_sql_str(canonical_name)}"
+        )
+        filmography = [
+            FilmographyItem(
+                title=row["title"],
+                year=row.get("year"),
+                role=row["role"],
+                character_or_contribution=row.get("character_or_contribution"),
+                box_office=row.get("box_office"),
+                critical_reception=row.get("critical_reception"),
+                key_collaborators=row.get("key_collaborators") or [],
+            )
+            for row in _extract_rows(credits_result)
+        ]
+
+        collaborations_result = await self._run_query(
+            f"SELECT * FROM collaborations WHERE person = {_sql_str(canonical_name)}"
+        )
+        collaborators = [
+            CollaboratorCredit(
+                name=row["collaborator_name"],
+                role=row["collaborator_role"],
+                shared_projects=row.get("shared_projects") or [],
+                public_statements_about_collaboration=row.get("public_statements") or [],
+            )
+            for row in _extract_rows(collaborations_result)
+        ]
+
+        return PersonDossier(
+            name=person["name"],
+            primary_roles=person.get("primary_roles") or [],
+            bio_summary=person.get("bio_summary") or None,
+            filmography=filmography,
+            collaborators=collaborators,
+            recognition=Recognition(
+                awards_and_nominations=person.get("awards_and_nominations") or [],
+                documented_controversies=person.get("documented_controversies") or [],
+            ),
+            attributes=CastingAttributes(
+                age=person.get("age"),
+                gender=person.get("gender"),
+                nationality=person.get("nationality"),
+                physical_characteristics=person.get("physical_characteristics"),
+                social_media_following=person.get("social_media_following"),
+            ),
+            availability=Availability(
+                current_and_upcoming_commitments=person.get("current_and_upcoming_commitments") or [],
+                union_affiliation=person.get("union_affiliation") or [],
+            ),
+            skills=Skills(
+                languages_and_accents=person.get("languages_and_accents") or [],
+                physical_skills=person.get("physical_skills") or [],
+            ),
+        )
 
     async def find_or_research_person(
         self,
