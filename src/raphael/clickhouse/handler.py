@@ -4,7 +4,15 @@ from typing import Any, Optional, Union
 
 # Import custom packages
 from src.raphael.clickhouse.client import ClickHouseClient
-from src.raphael.agentry.parallel.models import PersonDossier
+from src.raphael.agentry.parallel.models import (
+    PersonDossier,
+    FilmographyItem,
+    CollaboratorCredit,
+    Recognition,
+    CastingAttributes,
+    Availability,
+    Skills,
+)
 from src.raphael.parallel.client import ParallelClient
 
 
@@ -114,6 +122,33 @@ def _extract_column(result: Optional[Any], column: str) -> list[str]:
         payload = json.loads(text)
         idx = payload["columns"].index(column)
         return [row[idx] for row in payload["rows"] if idx < len(row) and row[idx] is not None]
+    except (json.JSONDecodeError, KeyError, ValueError, TypeError):
+        return []
+
+
+def _extract_rows(result: Optional[Any], columns: list[str]) -> list[dict[str, Any]]:
+    """
+    Pull full rows (only the requested `columns`, in caller order) out of a
+    raw _run_query result (a JSON payload {"columns": [...], "rows": [[...],
+    ...]}, possibly wrapped in a list of MCP content blocks). Each returned
+    dict maps column name -> raw cell value. Never raises -- returns [] if
+    unparseable/missing/any requested column is absent from the result.
+    """
+    text = result
+    if isinstance(text, list):
+        text = "".join(
+            (block.get("text", "") if isinstance(block, dict) else getattr(block, "text", ""))
+            for block in text
+        )
+    if not isinstance(text, str):
+        return []
+    try:
+        payload = json.loads(text)
+        indices = [payload["columns"].index(column) for column in columns]
+        return [
+            {column: (row[idx] if idx < len(row) else None) for column, idx in zip(columns, indices)}
+            for row in payload["rows"]
+        ]
     except (json.JSONDecodeError, KeyError, ValueError, TypeError):
         return []
 
@@ -374,6 +409,97 @@ class ClickHouseHandler:
         await self.ensure_schema()
         return await self._run_query(f"SELECT * FROM people WHERE name = {_sql_str(name)} LIMIT 1")
 
+    async def get_dossier(self, name: str) -> Optional[PersonDossier]:
+        """
+        Full-fidelity reconstruction of a stored PersonDossier for `name`,
+        joining across all three tables: people (bio/recognition/attributes/
+        availability/skills), credits (-> filmography), collaborations
+        (-> collaborators).
+
+        `name` is used as-is (exact match against people.name) -- callers
+        that need name-variant canonicalization (e.g. find_or_research_dossier)
+        must resolve the canonical name themselves first, same convention
+        get_person() follows today.
+
+        Returns None if no matching people row exists. A person with zero
+        credits/collaborations rows still returns a PersonDossier with empty
+        (not None) filmography/collaborators lists -- that's a legitimately
+        empty relation, not a lookup failure.
+        """
+        await self.ensure_schema()
+
+        people_columns = [
+            "name", "bio_summary", "primary_roles", "awards_and_nominations",
+            "documented_controversies", "age", "gender", "nationality",
+            "physical_characteristics", "social_media_following",
+            "current_and_upcoming_commitments", "union_affiliation",
+            "languages_and_accents", "physical_skills",
+        ]
+        people_result = await self._run_query(f"SELECT * FROM people WHERE name = {_sql_str(name)} LIMIT 1")
+        people_rows = _extract_rows(people_result, people_columns)
+        if not people_rows:
+            return None
+        row = people_rows[0]
+
+        credits_columns = [
+            "title", "year", "role", "character_or_contribution",
+            "box_office", "critical_reception", "key_collaborators",
+        ]
+        credits_result = await self._run_query(f"SELECT * FROM credits WHERE person = {_sql_str(name)}")
+        filmography = [
+            FilmographyItem(
+                title=credit_row["title"],
+                year=credit_row["year"],
+                role=credit_row["role"],
+                character_or_contribution=credit_row["character_or_contribution"],
+                box_office=credit_row["box_office"],
+                critical_reception=credit_row["critical_reception"],
+                key_collaborators=credit_row["key_collaborators"] or [],
+            )
+            for credit_row in _extract_rows(credits_result, credits_columns)
+        ]
+
+        collaborations_columns = [
+            "collaborator_name", "collaborator_role", "shared_projects", "public_statements",
+        ]
+        collaborations_result = await self._run_query(f"SELECT * FROM collaborations WHERE person = {_sql_str(name)}")
+        collaborators = [
+            CollaboratorCredit(
+                name=collab_row["collaborator_name"],
+                role=collab_row["collaborator_role"],
+                shared_projects=collab_row["shared_projects"] or [],
+                public_statements_about_collaboration=collab_row["public_statements"] or [],
+            )
+            for collab_row in _extract_rows(collaborations_result, collaborations_columns)
+        ]
+
+        return PersonDossier(
+            name=row["name"],
+            bio_summary=row["bio_summary"],
+            primary_roles=row["primary_roles"] or [],
+            filmography=filmography,
+            collaborators=collaborators,
+            recognition=Recognition(
+                awards_and_nominations=row["awards_and_nominations"] or [],
+                documented_controversies=row["documented_controversies"] or [],
+            ),
+            attributes=CastingAttributes(
+                age=row["age"],
+                gender=row["gender"],
+                nationality=row["nationality"],
+                physical_characteristics=row["physical_characteristics"],
+                social_media_following=row["social_media_following"],
+            ),
+            availability=Availability(
+                current_and_upcoming_commitments=row["current_and_upcoming_commitments"] or [],
+                union_affiliation=row["union_affiliation"] or [],
+            ),
+            skills=Skills(
+                languages_and_accents=row["languages_and_accents"] or [],
+                physical_skills=row["physical_skills"] or [],
+            ),
+        )
+
     async def find_or_research_person(
         self,
         parallel_client: ParallelClient,
@@ -410,6 +536,57 @@ class ClickHouseHandler:
             return None
 
         return await self.get_person(dossier.name)
+
+    async def find_or_research_dossier(
+        self,
+        parallel_client: ParallelClient,
+        name: str,
+        additional_context: Optional[str] = None,
+    ) -> tuple[Optional[PersonDossier], bool]:
+        """
+        Like find_or_research_person(), but always returns a full-fidelity
+        PersonDossier (bio, recognition, attributes, availability, skills,
+        AND filmography/collaborators) regardless of hit/miss, rather than
+        the raw flat people-table row find_or_research_person() returns on a
+        hit. This is the method EnrichmentAgent uses.
+
+        On a cache hit: reconstructs the dossier via get_dossier() (a
+        3-table join: people + credits + collaborations).
+        On a cache miss: researches via parallel_client.aresearch_person(),
+        stores via insert_person() (identical to find_or_research_person's
+        miss path), and returns the fresh, already-full-fidelity dossier
+        object directly -- no need to re-query ClickHouse, since the whole
+        object is already in hand. This keeps the miss path to the same
+        query cost as find_or_research_person's miss path.
+
+        Returns (dossier, was_cache_hit) -- (None, False) if lookup/research/
+        storage failed at any step.
+
+        Does not modify or replace find_or_research_person(), which main.py's
+        CLI demos depend on for its exact raw-row return shape -- this is an
+        additive sibling method, sharing the same canonicalization helpers.
+
+        Same known limitation as find_or_research_person(): an already-stored
+        person is never re-researched/refreshed.
+        """
+        await self.ensure_schema()
+        existing_names = await self._fetch_existing_names()
+        canonical_name = _resolve_canonical_name(name, existing_names)
+
+        existing = await self.get_person(canonical_name)
+        if _extract_column(existing, "name"):
+            dossier = await self.get_dossier(canonical_name)
+            return dossier, True
+
+        dossier = await parallel_client.aresearch_person(name, additional_context=additional_context)
+        if dossier is None:
+            return None, False
+
+        stored = await self.insert_person(dossier)
+        if not stored:
+            return None, False
+
+        return dossier, False
 
     async def search_people(self, **criteria: Union[str, int, list]) -> Optional[Any]:
         """
