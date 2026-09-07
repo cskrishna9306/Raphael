@@ -531,6 +531,14 @@ class ClickHouseHandler:
         if dossier is None:
             return None
 
+        # Store under the caller's own name (e.g. TMDB's), not whatever free-text
+        # name the research agent decided to use (which can be a differently
+        # formatted/decorated variant, e.g. "Talulah Jane Riley-Milburn (Talulah
+        # Riley)") -- the caller's name is what future lookups will query by, and
+        # is the one the canonicalization check above already confirmed has no
+        # existing match.
+        dossier.name = canonical_name
+
         stored = await self.insert_person(dossier)
         if not stored:
             return None
@@ -582,11 +590,38 @@ class ClickHouseHandler:
         if dossier is None:
             return None, False
 
+        # See find_or_research_person's matching comment: store/return under the
+        # caller's own name, not the research agent's free-text choice.
+        dossier.name = canonical_name
+
         stored = await self.insert_person(dossier)
         if not stored:
             return None, False
 
         return dossier, False
+
+    async def get_new_names(self, candidate_names: list[str]) -> list[str]:
+        """
+        Batch pre-filter: given many candidate names, fetch the stored people.name
+        list ONCE and return only the candidates that don't already match a stored
+        name (exact match, or a token-subset variant per _resolve_canonical_name) --
+        for callers about to fan out concurrent research over many names, so they
+        don't each redundantly re-scan the whole people table the way
+        find_or_research_person's/find_or_research_dossier's per-call
+        _fetch_existing_names() would.
+
+        Known limitation, accepted for MVP: this only filters candidates against
+        what's already stored, not against each other -- two different people in
+        `candidate_names` who happen to be name variants of one another (see
+        _is_name_variant) can both be returned as "new" and end up inserted as
+        separate rows if a caller researches/stores them concurrently.
+        """
+        await self.ensure_schema()
+        existing_names = await self._fetch_existing_names()
+        return [
+            name for name in candidate_names
+            if name not in existing_names and _resolve_canonical_name(name, existing_names) == name
+        ]
 
     async def search_people(self, **criteria: Union[str, int, list]) -> Optional[Any]:
         """

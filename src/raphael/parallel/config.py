@@ -20,7 +20,9 @@ class Config:
         self.PARALLEL_API_KEY: str | None = os.getenv("PARALLEL_API_KEY")
         self.PARALLEL_PROCESSOR: str = os.getenv("PARALLEL_PROCESSOR", "base")
         self.PARALLEL_RESEARCH_PROCESSOR: str = os.getenv("PARALLEL_RESEARCH_PROCESSOR", "pro-fast")
-        self.PARALLEL_API_TIMEOUT: float = float(os.getenv("PARALLEL_API_TIMEOUT", "120"))
+        # pro-fast has a documented 30s-5min latency
+        # A short-time window of 120s preemptively shuts down the research agent
+        self.PARALLEL_API_TIMEOUT: float = float(os.getenv("PARALLEL_API_TIMEOUT", "300"))
 
         return
 

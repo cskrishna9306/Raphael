@@ -4,7 +4,14 @@ import httpx
 
 # Import custom modules
 from src.raphael.tmdb.config import config
-from src.raphael.tmdb.models import MovieSearchResult, MovieCredits, CastMember, CrewMember
+from src.raphael.tmdb.models import (
+    MovieSearchResult,
+    MovieCredits,
+    CastMember,
+    CrewMember,
+    PersonMovieCredits,
+    PersonMovieCredit,
+)
 
 
 class TMDBClient:
@@ -62,10 +69,30 @@ class TMDBClient:
         data = await self._get(f"movie/{movie_id}/credits", {})
         if data is None:
             return None
-        return MovieCredits(
-            cast=[CastMember(**member) for member in data.get("cast", [])],
-            crew=[CrewMember(**member) for member in data.get("crew", [])],
-        )
+        try:
+            return MovieCredits(
+                cast=[CastMember(**member) for member in data.get("cast", [])],
+                crew=[CrewMember(**member) for member in data.get("crew", [])],
+            )
+        except Exception as e:
+            print(f"[TMDB] Error parsing credits for movie {movie_id}: {e}")
+            return None
+
+    async def get_person_movie_credits(self, person_id: int) -> Optional[PersonMovieCredits]:
+        """
+        Fetch a person's movie cast credits by their TMDB id -- the traversal hop
+        "what other movies has this actor worked on" used by the `discover` ETL
+        command. The crew side of this endpoint is not modeled/returned; only the
+        actor graph is walked.
+        """
+        data = await self._get(f"person/{person_id}/movie_credits", {})
+        if data is None:
+            return None
+        try:
+            return PersonMovieCredits(cast=[PersonMovieCredit(**item) for item in data.get("cast", [])])
+        except Exception as e:
+            print(f"[TMDB] Error parsing movie credits for person {person_id}: {e}")
+            return None
 
     async def find_movie_credits(self, title: str) -> Optional[MovieCredits]:
         """
