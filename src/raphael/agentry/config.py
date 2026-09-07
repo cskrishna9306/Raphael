@@ -2,7 +2,6 @@
 import os
 from dotenv import load_dotenv
 
-
 class Config:
     """
     Env-driven settings for all agentic architecture.
@@ -34,8 +33,10 @@ class Config:
 
         # The Vertex AI model ID used by the risk_management agent
         self.RISK_MANAGEMENT_MODEL_ID: str = "gemini-3.5-flash-lite"
+        
+        # Set of supported documents that we can read
+        self.SUPPORTED_EXTENSIONS: set[str] = (".txt", ".pdf")
 
         return
-
 
 config = Config()

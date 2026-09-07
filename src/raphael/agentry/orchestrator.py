@@ -6,7 +6,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Import custom packages
 from src.raphael.agentry.config import config
-from src.raphael.agentry.casting_director.models import CastingReport
+from src.raphael.agentry.screenplay_breakdown import ScreenplayBreakdownAgent
+from src.raphael.agentry.casting_director import CastingDirectorAgent
 from src.raphael.agentry.enrichment import EnrichmentAgent
 from src.raphael.agentry.risk_management import RiskManagementAgent
 from src.raphael.chemistry.engine import ChemistryEngine
@@ -32,10 +33,12 @@ class Raphael:
         )
 
         # Built once and reused across every run, same convention
-        # CastingDirectorAgent follows for its own sub-agent(s). All three
-        # are cheap to construct (no heavy state) -- EnrichmentAgent's
+        # CastingDirectorAgent follows for its own sub-agent(s). All are
+        # cheap to construct (no heavy state) -- EnrichmentAgent's
         # ClickHouseHandler MCP session is opened per ainvoke() call, not
         # here, see EnrichmentAgent's docstring.
+        self.screenplay_breakdown_agent = ScreenplayBreakdownAgent()
+        self.casting_director_agent = CastingDirectorAgent()
         self.enrichment_agent = EnrichmentAgent()
         self.risk_management_agent = RiskManagementAgent()
         self.chemistry_engine = ChemistryEngine()
@@ -61,13 +64,15 @@ class Raphael:
 
         return ""
 
-    async def run_async(
-        self, casting_report: CastingReport
-    ) -> RecommendationReport:
+    async def run_async(self, document: str) -> RecommendationReport:
         """
-        Runs the post-casting pipeline over a draft CastingReport.
+        Runs the full pipeline over a raw screenplay document: breakdown ->
+        casting -> enrichment/risk -> chemistry -> recommendation.
         Async-only, same as its sub-agents.
         """
+        screenplay = await self.screenplay_breakdown_agent.ainvoke(document)
+        casting_report = await self.casting_director_agent.ainvoke(screenplay)
+
         # Enrichment and risk assessment are independent hence ran concurrently!
         enrichment_report, risk_report = await asyncio.gather(
             self.enrichment_agent.ainvoke(casting_report),
