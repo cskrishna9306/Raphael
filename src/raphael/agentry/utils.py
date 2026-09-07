@@ -1,5 +1,10 @@
 # Import standard packages
 from pydantic import BaseModel
+from io import BytesIO
+
+# Import third-party packages
+from fastapi import HTTPException
+from pypdf import PdfReader
 
 # Import LangChain packages
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -41,4 +46,22 @@ def candidate_risk_query(candidate: CastingCandidate) -> str:
         f"Actor: {candidate.name}\n"
         f"Casting context: {candidate.fit_rationale or 'unspecified'}\n"
         f"Known bio: {candidate.dossier.bio_summary if candidate.dossier else 'unspecified'}"
+    )
+
+def extract_text(filename: str, content: bytes) -> str:
+    """
+    Extracts plain text from an uploaded screenplay document. Supports
+    .txt (decoded as-is) and .pdf (text pulled page-by-page via pypdf, no
+    OCR -- scanned/image-only PDFs will yield empty/partial text).
+    """
+    if filename.lower().endswith(".pdf"):
+        reader = PdfReader(BytesIO(content))
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+    if filename.lower().endswith(".txt"):
+        return content.decode("utf-8")
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unsupported file type for '{filename}' -- expected one of {config.SUPPORTED_EXTENSIONS}.",
     )
