@@ -9,9 +9,9 @@ from src.raphael.agentry.config import config
 from src.raphael.agentry.casting_director.models import CastingReport
 from src.raphael.agentry.enrichment import EnrichmentAgent
 from src.raphael.agentry.risk_management import RiskManagementAgent
-from src.raphael.agentry.risk_management.models import RiskReport
 from src.raphael.chemistry.engine import ChemistryEngine
-from src.raphael.chemistry.models import ChemistryReport
+from src.raphael.recommendation.engine import RecommendationEngine
+from src.raphael.recommendation.models import RecommendationReport
 
 
 class Raphael:
@@ -39,6 +39,7 @@ class Raphael:
         self.enrichment_agent = EnrichmentAgent()
         self.risk_management_agent = RiskManagementAgent()
         self.chemistry_engine = ChemistryEngine()
+        self.recommendation_engine = RecommendationEngine()
 
         return
 
@@ -60,7 +61,9 @@ class Raphael:
 
         return ""
 
-    async def run_async(self, casting_report: CastingReport) -> tuple[CastingReport, ChemistryReport, RiskReport]:
+    async def run_async(
+        self, casting_report: CastingReport
+    ) -> RecommendationReport:
         """
         Runs the post-casting pipeline over a draft CastingReport.
         Async-only, same as its sub-agents.
@@ -77,7 +80,8 @@ class Raphael:
         # here, so it isn't returned separately.
         enriched_casting_report = enrichment_report.merge_into(casting_report)
         chemistry_report = self.chemistry_engine.invoke(enriched_casting_report)
-        
-        return enriched_casting_report, chemistry_report, risk_report
+        recommendations = self.recommendation_engine.invoke(chemistry_report, risk_report)
+
+        return recommendations
 
 
