@@ -15,5 +15,6 @@ dependencies = [
     "langchain-mcp-adapters>=0.3.2",
     "langchain-parallel>=0.5.0",
     "langgraph>=1.2.11",
+    "pypdf>=6.18.0",
     "uvicorn[standard]>=0.52.3",
 ]
