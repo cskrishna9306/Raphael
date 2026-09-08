@@ -1,0 +1,12 @@
+.placeholder {
+  flex: none;
+  border: 2px solid var(--color-border-soft);
+  background: var(--color-panel-alt);
+  background-image: linear-gradient(
+      to bottom right,
+      transparent calc(50% - 1px),
+      var(--color-track) 50%,
+      transparent calc(50% + 1px)
+    ),
+    linear-gradient(to bottom left, transparent calc(50% - 1px), var(--color-track) 50%, transparent calc(50% + 1px));
+}

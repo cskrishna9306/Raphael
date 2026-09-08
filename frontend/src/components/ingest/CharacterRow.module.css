@@ -1,0 +1,46 @@
+.row {
+  border: 2px solid var(--color-border-soft);
+  background: var(--color-panel-inset);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rowLead {
+  border-color: var(--color-border);
+}
+
+.roleSelect {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  border: 2px solid var(--color-border-soft);
+  background: var(--color-panel);
+  color: var(--color-text-muted);
+  padding: 2px 6px;
+  flex: none;
+}
+
+.rowLead .roleSelect {
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.name {
+  flex: 1;
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.traits {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+}

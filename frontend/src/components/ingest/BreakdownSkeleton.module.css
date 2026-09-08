@@ -1,0 +1,32 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.headline {
+  border: 2px solid var(--color-border-soft);
+  background: var(--color-panel-inset);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.headlineTags {
+  display: flex;
+  gap: 8px;
+}
+
+.row {
+  border: 2px solid var(--color-border-dashed);
+  background: var(--color-panel-inset);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.row > *:nth-child(2) {
+  flex: 1;
+}
