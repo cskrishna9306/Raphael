@@ -6,10 +6,13 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Import custom packages
 from src.raphael.agentry.config import config
-from src.raphael.agentry.casting_director.models import CastingReport
+from src.raphael.agentry.screenplay_breakdown import ScreenplayBreakdownAgent
+from src.raphael.agentry.screenplay_breakdown.models import Screenplay
+from src.raphael.agentry.casting_director import CastingDirectorAgent
 from src.raphael.agentry.enrichment import EnrichmentAgent
 from src.raphael.agentry.risk_management import RiskManagementAgent
 from src.raphael.chemistry.engine import ChemistryEngine
+from src.raphael.clickhouse.handler import ClickHouseHandler
 from src.raphael.recommendation.engine import RecommendationEngine
 from src.raphael.recommendation.models import RecommendationReport
 
@@ -32,11 +35,20 @@ class Raphael:
         )
 
         # Built once and reused across every run, same convention
-        # CastingDirectorAgent follows for its own sub-agent(s). All three
-        # are cheap to construct (no heavy state) -- EnrichmentAgent's
-        # ClickHouseHandler MCP session is opened per ainvoke() call, not
-        # here, see EnrichmentAgent's docstring.
-        self.enrichment_agent = EnrichmentAgent()
+        # CastingDirectorAgent follows for its own sub-agent(s). All are
+        # cheap to construct (no heavy state).
+        #
+        # clickhouse_handler is the exception: it wraps a live MCP
+        # subprocess/session, so it can't be opened here (this __init__ is
+        # sync). It's opened once, at application startup, by app.py's
+        # lifespan handler (see clickhouse_handler docstring below) and
+        # handed to EnrichmentAgent so every /recommend request reuses the
+        # same session instead of paying for a new MCP subprocess + schema
+        # setup per request.
+        self.screenplay_breakdown_agent = ScreenplayBreakdownAgent()
+        self.casting_director_agent = CastingDirectorAgent()
+        self.clickhouse_handler = ClickHouseHandler()
+        self.enrichment_agent = EnrichmentAgent(clickhouse_handler=self.clickhouse_handler)
         self.risk_management_agent = RiskManagementAgent()
         self.chemistry_engine = ChemistryEngine()
         self.recommendation_engine = RecommendationEngine()
@@ -61,13 +73,20 @@ class Raphael:
 
         return ""
 
-    async def run_async(
-        self, casting_report: CastingReport
-    ) -> RecommendationReport:
+    async def analyze(self, document: str) -> Screenplay:
         """
-        Runs the post-casting pipeline over a draft CastingReport.
-        Async-only, same as its sub-agents.
+        Runs just the breakdown step over a raw screenplay document.
         """
+        # In terms of the UI flow, this will be the first endpoint that will
+        # be triggered by our frontend
+        return await self.screenplay_breakdown_agent.ainvoke(document)
+
+    async def recommend(self, screenplay: Screenplay) -> RecommendationReport:
+        """
+        Runs the rest of the pipeline over an already-broken-down screenplay from the /analyze endpoint.
+        """
+        casting_report = await self.casting_director_agent.ainvoke(screenplay)
+
         # Enrichment and risk assessment are independent hence ran concurrently!
         enrichment_report, risk_report = await asyncio.gather(
             self.enrichment_agent.ainvoke(casting_report),

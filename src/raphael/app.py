@@ -1,14 +1,31 @@
+# Import standard packages
+from contextlib import asynccontextmanager
+
 # Import third-party packages
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 
 # Import custom modules
-from src.raphael.agentry.casting_director.models import CastingReport
 from src.raphael.agentry.orchestrator import Raphael
+from src.raphael.agentry.utils import extract_text
+from src.raphael.agentry.screenplay_breakdown.models import Screenplay
 from src.raphael.recommendation.models import RecommendationReport
 
-# Instantiate a single FastAPI server and Raphael object
-app = FastAPI(title="Raphael")
 raphael = Raphael()
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """
+    Opens raphael's ClickHouseHandler MCP session once for the life of the
+    process (spinning up the MCP subprocess and running ensure_schema()
+    exactly once, instead of per /recommend request -- see
+    EnrichmentAgent/ClickHouseHandler docstrings), and tears it down on
+    shutdown.
+    """
+    async with raphael.clickhouse_handler:
+        yield
+
+# Instantiate a single FastAPI server
+app = FastAPI(title="Raphael", lifespan=lifespan)
 
 @app.get("/health")
 def health() -> dict:
@@ -24,11 +41,23 @@ def ready() -> dict:
     """
     return {"status": "ok"}
 
+@app.post("/analyze")
+async def analyze(file: UploadFile = File(...)) -> Screenplay:
+    """
+    Runs just the screenplay breakdown step over an uploaded screenplay document.
+    """
+    
+    # In terms of the UI flow, this will be the first endpoint that will
+    # be triggered by our frontend
+    content = await file.read()
+    document = extract_text(file.filename, content)
+    return await raphael.analyze(document)
+
 @app.post("/recommend")
-async def recommend(casting_report: CastingReport) -> RecommendationReport:
+async def recommend(screenplay: Screenplay) -> RecommendationReport:
     """
-    Runs the post-casting pipeline (enrichment, risk assessment, chemistry
-    scoring, recommendation ranking) over a draft CastingReport and returns
-    the resulting RecommendationReport.
+    Runs the rest of the pipeline (casting, enrichment, risk assessment,
+    chemistry scoring, recommendation ranking) over a Screenplay produced by
+    /analyze, and returns the resulting RecommendationReport.
     """
-    return await raphael.run_async(casting_report)
+    return await raphael.recommend(screenplay)

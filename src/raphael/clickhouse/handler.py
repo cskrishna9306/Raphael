@@ -252,6 +252,7 @@ class ClickHouseHandler:
         """
         await self._client.__aenter__()
         self._tools = {tool.name: tool for tool in self._client.tools}
+        await self.ensure_schema()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -339,8 +340,6 @@ class ClickHouseHandler:
         so that name variants (e.g. "Christopher Nolan" vs "Christopher Edward Nolan")
         don't create duplicate identities.
         """
-        await self.ensure_schema()
-
         existing_names = await self._fetch_existing_names()
         canonical_name = _resolve_canonical_name(dossier.name, existing_names)
 
@@ -406,7 +405,6 @@ class ClickHouseHandler:
         """
         Point lookup: has this person already been researched?
         """
-        await self.ensure_schema()
         return await self._run_query(f"SELECT * FROM people WHERE name = {_sql_str(name)} LIMIT 1")
 
     async def get_dossier(self, name: str) -> Optional[PersonDossier]:
@@ -426,8 +424,6 @@ class ClickHouseHandler:
         (not None) filmography/collaborators lists -- that's a legitimately
         empty relation, not a lookup failure.
         """
-        await self.ensure_schema()
-
         people_columns = [
             "name", "bio_summary", "primary_roles", "awards_and_nominations",
             "documented_controversies", "age", "gender", "nationality",
@@ -519,7 +515,6 @@ class ClickHouseHandler:
         dossier for someone already stored would add a second row for the same
         canonical name rather than replace the first.
         """
-        await self.ensure_schema()
         existing_names = await self._fetch_existing_names()
         canonical_name = _resolve_canonical_name(name, existing_names)
 
@@ -577,7 +572,6 @@ class ClickHouseHandler:
         Same known limitation as find_or_research_person(): an already-stored
         person is never re-researched/refreshed.
         """
-        await self.ensure_schema()
         existing_names = await self._fetch_existing_names()
         canonical_name = _resolve_canonical_name(name, existing_names)
 
@@ -616,7 +610,6 @@ class ClickHouseHandler:
         _is_name_variant) can both be returned as "new" and end up inserted as
         separate rows if a caller researches/stores them concurrently.
         """
-        await self.ensure_schema()
         existing_names = await self._fetch_existing_names()
         return [
             name for name in candidate_names
@@ -629,7 +622,6 @@ class ClickHouseHandler:
         or search_people(primary_roles=["Actor"]). Just a filter -- no collaboration-affinity
         ranking; use search_roster for that.
         """
-        await self.ensure_schema()
         if not criteria:
             return await self._run_query("SELECT * FROM people")
         return await self._run_query(f"SELECT * FROM people WHERE {_build_where_clause(criteria)}")
@@ -651,7 +643,6 @@ class ClickHouseHandler:
         first (see _resolve_canonical_name), so e.g. "Christopher Nolan" still
         matches a stored "Christopher Edward Nolan" row.
         """
-        await self.ensure_schema()
         if current_picks:
             existing_names = await self._fetch_existing_names()
             current_picks = _resolve_canonical_names(current_picks, existing_names)

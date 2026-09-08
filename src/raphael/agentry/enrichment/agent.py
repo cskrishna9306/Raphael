@@ -33,18 +33,31 @@ class EnrichmentAgent:
     sub-agent -- "research" is a direct SDK-level ParallelClient call,
     already encapsulated inside ClickHouseHandler.find_or_research_dossier.
 
-    Unlike RiskManagementAgent's search_agent (stateless, buildable once in
-    __init__), ClickHouseHandler is an async context manager wrapping a live
-    MCP subprocess/session -- it can't be opened in a sync __init__. Instead,
-    ainvoke() opens ONE ClickHouseHandler session for the entire graph run,
-    stashes it on self._handler, and every enrich_candidate branch (which
-    all run concurrently under that same ainvoke() call) reuses that single
-    session -- the closest async analogue to "build once, reuse across every
-    branch". Not safe to call ainvoke() twice concurrently on the same
-    instance as a result -- accepted MVP limitation, see ainvoke().
+    ClickHouseHandler is an async context manager wrapping a live MCP
+    subprocess/session, so it can't be opened in a sync __init__. There are
+    two ways to supply one, both ending with self._handler set to an
+    OPEN handler before enrich_candidate branches run:
+
+    - Preferred (this is what Raphael/app.py does): pass an already-open
+      `clickhouse_handler` (opened once, at application startup, by
+      app.py's lifespan handler -- see orchestrator.py) into __init__. Every
+      ainvoke() call then just reuses that one long-lived session -- no
+      per-request MCP subprocess spin-up or ensure_schema() re-run, and
+      it's safe to call ainvoke() concurrently since no lifecycle is being
+      managed per call.
+    - Fallback (standalone use, e.g. the README smoke test, with no handler
+      injected): ainvoke() opens and tears down its own ClickHouseHandler
+      session for that one call. Not safe to call ainvoke() twice
+      concurrently on the same instance in this mode, since the second
+      call's `async with` would overwrite self._handler mid-flight of the
+      first.
     """
 
-    def __init__(self, parallel_client: Optional[ParallelClient] = None):
+    def __init__(
+        self,
+        parallel_client: Optional[ParallelClient] = None,
+        clickhouse_handler: Optional[ClickHouseHandler] = None,
+    ):
         """
         Builds the enrichment graph: fan out over unique candidates, then
         per candidate look up (or research + store) a dossier, then reduce
@@ -52,11 +65,16 @@ class EnrichmentAgent:
 
         ParallelClient is cheap/stateless (lazy API clients -- see
         ParallelClient.client/.async_client) so it's safe to build once
-        here, same as RiskManagementAgent builds its search_agent once. The
-        ClickHouseHandler is NOT built here -- see ainvoke().
+        here, same as RiskManagementAgent builds its search_agent once.
+
+        clickhouse_handler, if given, is assumed to already be open (or
+        about to be opened externally before ainvoke() runs) and is reused
+        for the lifetime of this agent -- see class docstring. If omitted,
+        ainvoke() falls back to opening/closing its own session per call.
         """
         self.parallel_client = parallel_client or ParallelClient()
-        self._handler: Optional[ClickHouseHandler] = None
+        self._owns_handler = clickhouse_handler is None
+        self._handler: Optional[ClickHouseHandler] = clickhouse_handler
 
         # Initialize the graph and its nodes
         graph = StateGraph(EnrichmentState)
@@ -140,13 +158,21 @@ class EnrichmentAgent:
         """
         Asynchronously runs the enrichment graph for a casting report.
 
-        Opens exactly one ClickHouseHandler MCP session for the whole run,
-        shared by every fan-out branch (see class docstring), and tears it
-        down once the graph finishes -- success or failure -- via `async
-        with`/`finally`. Not safe to call this twice concurrently on the
-        same instance, since the second call's `async with` would overwrite
+        If a clickhouse_handler was injected at construction (see class
+        docstring), it's already open and reused as-is -- no session
+        open/close here, safe to call concurrently. Otherwise (standalone
+        use), opens exactly one ClickHouseHandler MCP session for this run,
+        shared by every fan-out branch, and tears it down once the graph
+        finishes -- success or failure -- via `async with`/`finally`. Not
+        safe to call this twice concurrently on the same instance in that
+        mode, since the second call's `async with` would overwrite
         self._handler mid-flight of the first.
         """
+        if not self._owns_handler:
+            assert self._handler is not None, "EnrichmentAgent given no clickhouse_handler and none was injected before ainvoke()"
+            result = await self.graph.ainvoke({"casting_report": casting_report, "assessments": []})
+            return result["report"]
+
         async with ClickHouseHandler() as handler:
             self._handler = handler
             try:
