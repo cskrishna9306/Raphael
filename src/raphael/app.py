@@ -4,6 +4,7 @@ from fastapi import FastAPI, File, UploadFile
 # Import custom modules
 from src.raphael.agentry.orchestrator import Raphael
 from src.raphael.agentry.utils import extract_text
+from src.raphael.agentry.screenplay_breakdown.models import Screenplay
 from src.raphael.recommendation.models import RecommendationReport
 
 # Instantiate a single FastAPI server and Raphael object
@@ -24,14 +25,23 @@ def ready() -> dict:
     """
     return {"status": "ok"}
 
-@app.post("/recommend")
-async def recommend(file: UploadFile = File(...)) -> RecommendationReport:
+@app.post("/analyze")
+async def analyze(file: UploadFile = File(...)) -> Screenplay:
     """
-    Runs the full pipeline (screenplay breakdown, casting, enrichment, risk
-    assessment, chemistry scoring, recommendation ranking) over an uploaded
-    screenplay document (.txt or .pdf) and returns the resulting
-    RecommendationReport.
+    Runs just the screenplay breakdown step over an uploaded screenplay document.
     """
+    
+    # In terms of the UI flow, this will be the first endpoint that will
+    # be triggered by our frontend
     content = await file.read()
     document = extract_text(file.filename, content)
-    return await raphael.run_async(document)
+    return await raphael.analyze(document)
+
+@app.post("/recommend")
+async def recommend(screenplay: Screenplay) -> RecommendationReport:
+    """
+    Runs the rest of the pipeline (casting, enrichment, risk assessment,
+    chemistry scoring, recommendation ranking) over a Screenplay produced by
+    /analyze, and returns the resulting RecommendationReport.
+    """
+    return await raphael.recommend(screenplay)

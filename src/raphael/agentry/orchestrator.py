@@ -7,6 +7,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 # Import custom packages
 from src.raphael.agentry.config import config
 from src.raphael.agentry.screenplay_breakdown import ScreenplayBreakdownAgent
+from src.raphael.agentry.screenplay_breakdown.models import Screenplay
 from src.raphael.agentry.casting_director import CastingDirectorAgent
 from src.raphael.agentry.enrichment import EnrichmentAgent
 from src.raphael.agentry.risk_management import RiskManagementAgent
@@ -64,13 +65,18 @@ class Raphael:
 
         return ""
 
-    async def run_async(self, document: str) -> RecommendationReport:
+    async def analyze(self, document: str) -> Screenplay:
         """
-        Runs the full pipeline over a raw screenplay document: breakdown ->
-        casting -> enrichment/risk -> chemistry -> recommendation.
-        Async-only, same as its sub-agents.
+        Runs just the breakdown step over a raw screenplay document.
         """
-        screenplay = await self.screenplay_breakdown_agent.ainvoke(document)
+        # In terms of the UI flow, this will be the first endpoint that will
+        # be triggered by our frontend
+        return await self.screenplay_breakdown_agent.ainvoke(document)
+
+    async def recommend(self, screenplay: Screenplay) -> RecommendationReport:
+        """
+        Runs the rest of the pipeline over an already-broken-down screenplay from the /analyze endpoint.
+        """
         casting_report = await self.casting_director_agent.ainvoke(screenplay)
 
         # Enrichment and risk assessment are independent hence ran concurrently!
