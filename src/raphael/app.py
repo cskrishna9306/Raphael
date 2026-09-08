@@ -1,3 +1,6 @@
+# Import standard packages
+from contextlib import asynccontextmanager
+
 # Import third-party packages
 from fastapi import FastAPI, File, UploadFile
 
@@ -7,9 +10,22 @@ from src.raphael.agentry.utils import extract_text
 from src.raphael.agentry.screenplay_breakdown.models import Screenplay
 from src.raphael.recommendation.models import RecommendationReport
 
-# Instantiate a single FastAPI server and Raphael object
-app = FastAPI(title="Raphael")
 raphael = Raphael()
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """
+    Opens raphael's ClickHouseHandler MCP session once for the life of the
+    process (spinning up the MCP subprocess and running ensure_schema()
+    exactly once, instead of per /recommend request -- see
+    EnrichmentAgent/ClickHouseHandler docstrings), and tears it down on
+    shutdown.
+    """
+    async with raphael.clickhouse_handler:
+        yield
+
+# Instantiate a single FastAPI server
+app = FastAPI(title="Raphael", lifespan=lifespan)
 
 @app.get("/health")
 def health() -> dict:

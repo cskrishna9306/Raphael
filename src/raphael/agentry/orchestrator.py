@@ -12,6 +12,7 @@ from src.raphael.agentry.casting_director import CastingDirectorAgent
 from src.raphael.agentry.enrichment import EnrichmentAgent
 from src.raphael.agentry.risk_management import RiskManagementAgent
 from src.raphael.chemistry.engine import ChemistryEngine
+from src.raphael.clickhouse.handler import ClickHouseHandler
 from src.raphael.recommendation.engine import RecommendationEngine
 from src.raphael.recommendation.models import RecommendationReport
 
@@ -35,12 +36,19 @@ class Raphael:
 
         # Built once and reused across every run, same convention
         # CastingDirectorAgent follows for its own sub-agent(s). All are
-        # cheap to construct (no heavy state) -- EnrichmentAgent's
-        # ClickHouseHandler MCP session is opened per ainvoke() call, not
-        # here, see EnrichmentAgent's docstring.
+        # cheap to construct (no heavy state).
+        #
+        # clickhouse_handler is the exception: it wraps a live MCP
+        # subprocess/session, so it can't be opened here (this __init__ is
+        # sync). It's opened once, at application startup, by app.py's
+        # lifespan handler (see clickhouse_handler docstring below) and
+        # handed to EnrichmentAgent so every /recommend request reuses the
+        # same session instead of paying for a new MCP subprocess + schema
+        # setup per request.
         self.screenplay_breakdown_agent = ScreenplayBreakdownAgent()
         self.casting_director_agent = CastingDirectorAgent()
-        self.enrichment_agent = EnrichmentAgent()
+        self.clickhouse_handler = ClickHouseHandler()
+        self.enrichment_agent = EnrichmentAgent(clickhouse_handler=self.clickhouse_handler)
         self.risk_management_agent = RiskManagementAgent()
         self.chemistry_engine = ChemistryEngine()
         self.recommendation_engine = RecommendationEngine()
