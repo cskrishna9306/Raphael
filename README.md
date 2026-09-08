@@ -13,7 +13,7 @@ uv sync
 cp .env.example .env
 ```
 
-`.env` needs GCP credentials (Vertex AI), plus Parallel, ClickHouse, and TMDB credentials -- see `.env.example` for the full list. `HOST`/`PORT` are optional and default to `0.0.0.0:8000`.
+`.env` needs GCP credentials (Vertex AI), plus Parallel, ClickHouse, and TMDB credentials -- see `.env.example` for the full list. `HOST`/`PORT` are optional and default to `0.0.0.0:8000`. `ALLOWED_ORIGINS` is also optional and defaults to `http://localhost:5173` (the frontend's dev server) -- see `frontend/README.md` for running the frontend.
 
 Start the FastAPI server:
 
