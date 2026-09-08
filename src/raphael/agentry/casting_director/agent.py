@@ -8,7 +8,7 @@ from langgraph.types import Send
 
 # Import custom modules
 from src.raphael.agentry.config import config
-from src.raphael.agentry.screenplay_breakdown.models import Screenplay, CharacterProfile
+from src.raphael.agentry.screenplay_breakdown.models import Screenplay, CharacterProfile, RolePresence
 from src.raphael.agentry.parallel.abstract import ParallelAbstractAgent
 from src.raphael.agentry.parallel.models import ParallelAgentType
 # PersonDossier import dropped -- only referenced by the commented-out
@@ -76,11 +76,16 @@ class CastingDirectorAgent:
 
     def fan_out(self, state: CastingDirectorState) -> list[Send]:
         """
-        Fans out one branch per character in the screenplay's cast.
+        Fans out one branch per named/principal character in the screenplay's cast.
         """
+        
+        # BACKGROUND and EXTRA characters are skipped -- they aren't cast
+        # with a named actor in practice
+        
         return [
             Send("search_candidates", {"character": character})
             for character in state["screenplay"].cast.characters
+            if character.role_presence not in (RolePresence.BACKGROUND, RolePresence.EXTRA)
         ]
 
     def build_report(self, state: CastingDirectorState) -> dict:
@@ -101,12 +106,38 @@ class CastingDirectorAgent:
         structures the findings into name + fit rationale + a best-effort
         dossier prefilled from whatever the search findings happen to
         surface (no deep research call -- see enrich_candidate).
+
+        A character with zero candidates sinks the entire report downstream
+        (see ChemistryEngine.search_clusters), so an empty first pass gets
+        one retry with a broadened query before it's accepted -- this is for
+        named/principal characters only (BACKGROUND/EXTRA never reach here,
+        see fan_out) where an empty result is more likely search flakiness
+        than a genuine "no real actor fits this" case.
         """
-        findings = await self.search_agent.ainvoke(character_query(character))
+        candidates = await self._search_and_structure(character_query(character), character.name)
+
+        if not candidates:
+            broadened_query = character_query(character) + (
+                "\n\nYour first search found no solid candidates for this description. "
+                "Broaden your search and name the best real, working actor who plausibly "
+                "fits the character's role size, gender, and general type, even if the "
+                "match isn't exact -- only decline again if truly no real actor search "
+                "result supports even a loose fit."
+            )
+            candidates = await self._search_and_structure(broadened_query, character.name)
+
+        return candidates
+
+    async def _search_and_structure(self, query: str, character_name: str) -> list[CastingCandidate]:
+        """
+        Runs one search + structuring pass for a character and returns
+        whatever candidates it extracts (possibly none).
+        """
+        findings = await self.search_agent.ainvoke(query)
 
         result: CandidateSearchResult = await structuring_model(CandidateSearchResult, config.CASTING_DIRECTOR_MODEL_ID).ainvoke(
             f"Extract the candidate actors from these casting search findings "
-            f"for the character {character.name}: their name, a fit rationale, "
+            f"for the character {character_name}: their name, a fit rationale, "
             f"and a dossier prefilled with whatever casting-relevant facts "
             f"(bio, notable roles, age/nationality/build, etc.) the findings "
             f"happen to mention. Leave dossier fields unset rather than "
@@ -116,24 +147,6 @@ class CastingDirectorAgent:
 
         return result.candidates
 
-    # Deep-research enrichment is disabled -- find_candidates prefills each
-    # candidate's dossier from search findings alone instead (see above).
-    # Left commented out, not deleted, since it depends on self.research_agent
-    # (also disabled in __init__); re-enable both together to restore it.
-    #
-    # async def enrich_candidate(self, candidate: CastingCandidate) -> CastingCandidate:
-    #     """
-    #     Runs Parallel's deep-research task on a single candidate to ground
-    #     their dossier in real, citable facts.
-    #     """
-    #     findings = await self.research_agent.ainvoke(f"Compile a casting dossier on {candidate.name}.")
-    #
-    #     dossier: PersonDossier = await structuring_model(PersonDossier, config.CASTING_DIRECTOR_MODEL_ID).ainvoke(
-    #         f"Extract {candidate.name}'s casting dossier from this research:\n\n{findings}"
-    #     )
-    #
-    #     return candidate.model_copy(update={"dossier": dossier})
-
     async def search_candidates(self, state: CharacterSearchState) -> dict:
         """
         Finds candidates for a single character, each with a best-effort
@@ -142,6 +155,7 @@ class CastingDirectorAgent:
         character = state["character"]
         candidates = await self.find_candidates(character)
 
+        # NOTE: Moved the deep research enrichment agent to exist as its own agent
         # Deep-research enrichment disabled -- see enrich_candidate above.
         # enriched_candidates = await asyncio.gather(
         #     *(self.enrich_candidate(candidate) for candidate in candidates)

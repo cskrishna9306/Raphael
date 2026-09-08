@@ -31,7 +31,7 @@ class CastingReport(BaseModel):
     paired with the candidate actors found for that role.
     """
     title: Optional[str] = Field(default=None, description="The title of the movie/screenplay being cast.")
-    castings: list[CastingCharacter] = Field(default_factory=list, description="Casting candidates found for each character.")
+    castings: list[CastingCharacter] = Field(default_factory=list, description="Casting candidates found for each named/principal character -- BACKGROUND and EXTRA characters are excluded (see CastingDirectorAgent.fan_out).")
 
     def unique_candidates(self) -> dict[str, "CastingCandidate"]:
         """
