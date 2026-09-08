@@ -1,0 +1,14 @@
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-track) 0%,
+    var(--color-track) 32%,
+    #3e3a31 48%,
+    var(--color-accent) 52%,
+    #3e3a31 56%,
+    var(--color-track) 72%,
+    var(--color-track) 100%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 2.1s linear infinite;
+}

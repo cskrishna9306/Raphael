@@ -1,0 +1,26 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 2px solid var(--color-danger);
+  background: rgba(180, 85, 63, 0.16);
+  color: var(--color-text);
+  padding: 10px 20px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-danger);
+  flex: none;
+}
+
+.code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 6px;
+  font-size: 11px;
+}

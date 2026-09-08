@@ -1,0 +1,22 @@
+:root {
+  --color-bg: #0b0c0e;
+  --color-panel: #111214;
+  --color-panel-alt: #16181a;
+  --color-panel-inset: #191b1e;
+  --color-border: #4a4e55;
+  --color-border-soft: #3a3e44;
+  --color-border-dashed: #33373d;
+  --color-track: #24272b;
+  --color-track-alt: #26292e;
+  --color-text: #f2efe9;
+  --color-text-muted: #a9a399;
+  --color-text-faint: #8c877e;
+  --color-accent: #c8a24a;
+  --color-accent-ink: #111214;
+  --color-danger: #b4553f;
+
+  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+
+  --shadow-panel: 8px 8px 0 rgba(0, 0, 0, 0.55);
+  --shadow-popover: 5px 5px 0 rgba(0, 0, 0, 0.55);
+}

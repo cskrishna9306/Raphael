@@ -1,0 +1,61 @@
+.card {
+  border: 2px solid var(--color-border);
+  background: var(--color-panel-inset);
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon {
+  width: 28px;
+  height: 36px;
+  border: 2px solid var(--color-border);
+  position: relative;
+  flex: none;
+}
+
+.icon::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-top: 9px solid var(--color-border);
+}
+
+.meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.replace {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  border: 2px solid var(--color-border-soft);
+  padding: 4px 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.replace:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

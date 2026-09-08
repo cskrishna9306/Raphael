@@ -1,0 +1,42 @@
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 2px dashed var(--color-border-dashed);
+  background: var(--color-panel-alt);
+  flex-wrap: wrap;
+}
+
+.label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.active,
+.inactive {
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.inactive {
+  border: 2px solid var(--color-border-soft);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.active {
+  border: 2px solid var(--color-border);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}

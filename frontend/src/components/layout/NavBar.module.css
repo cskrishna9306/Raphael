@@ -1,0 +1,56 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--color-border);
+  padding: 14px 20px;
+  background: var(--color-panel);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.logo {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.title {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav {
+  display: flex;
+  gap: 22px;
+  font-size: 12px;
+}
+
+.link,
+.linkActive {
+  color: var(--color-text-faint);
+  text-decoration: none;
+  padding-bottom: 2px;
+}
+
+.link:hover {
+  color: var(--color-text);
+}
+
+.linkActive {
+  color: var(--color-text);
+  border-bottom: 2px solid var(--color-border);
+}

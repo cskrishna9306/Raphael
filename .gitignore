@@ -222,3 +222,6 @@ __marimo__/
 
 # Ignore everything added to the keys/ dir
 keys/
+
+# Firebase CLI local deploy cache
+.firebase/

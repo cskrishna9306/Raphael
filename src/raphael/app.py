@@ -3,11 +3,13 @@ from contextlib import asynccontextmanager
 
 # Import third-party packages
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 # Import custom modules
 from src.raphael.agentry.orchestrator import Raphael
 from src.raphael.agentry.utils import extract_text
 from src.raphael.agentry.screenplay_breakdown.models import Screenplay
+from src.raphael.config import config
 from src.raphael.recommendation.models import RecommendationReport
 
 raphael = Raphael()
@@ -26,6 +28,13 @@ async def lifespan(_app: FastAPI):
 
 # Instantiate a single FastAPI server
 app = FastAPI(title="Raphael", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.ALLOWED_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 def health() -> dict:
