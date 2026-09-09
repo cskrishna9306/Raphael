@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Nothing reaches Firestore directly from a browser. Every read and write
+// goes through the FastAPI backend, which authenticates the caller's Firebase
+// ID token (src/raphael/auth.py) and then talks to Firestore with the Admin
+// SDK -- and the Admin SDK bypasses these rules entirely.
+//
+// So this file exists to deny everything else. If a client ever does need
+// direct access, the per-user check to add is that request.auth.uid matches
+// the {uid} segment; until then, closed is the correct posture.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
