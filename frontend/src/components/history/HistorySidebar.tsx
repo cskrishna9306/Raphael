@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { ApiError, getProject } from "../../api/client"
 import { useAppState } from "../../state/AppStateContext"
+import { useAuth } from "../../state/AuthContext"
 import { useHistory } from "../../state/HistoryContext"
 import { clearCachedIngestFile } from "../../utils/ingestFileCache"
 import { HistoryRow } from "./HistoryRow"
@@ -14,6 +15,7 @@ import styles from "./HistorySidebar.module.css"
  */
 export function HistorySidebar() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { projects, loading, error, remove } = useHistory()
   const { projectId, setScreenplay, setReport, setProjectId, reset } = useAppState()
 
@@ -76,7 +78,16 @@ export function HistorySidebar() {
       </button>
 
       <div className={styles.scroller}>
-        {loading ? (
+        {!user ? (
+          // Signing in is optional, so this is an invitation rather than a
+          // gate -- but promising to save runs we cannot save would be a lie.
+          <p className={styles.note}>
+            <Link to="/login" className={styles.signInLink}>
+              Sign in
+            </Link>{" "}
+            to save your screenplays and come back to them later.
+          </p>
+        ) : loading ? (
           <p className={styles.note}>Loading…</p>
         ) : error ? (
           <p className={styles.error}>{error}</p>

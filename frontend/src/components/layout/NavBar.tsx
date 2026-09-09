@@ -55,8 +55,9 @@ export function NavBar() {
             </button>
           </div>
         ) : initializing ? null : (
-          // Held back until Firebase has resolved the session, so a returning
-          // user never sees "Sign in" flash before their account appears.
+          // Signing in is optional -- this is a way to reach it voluntarily,
+          // not a gate. Held back until Firebase has resolved the session, so
+          // a returning user never sees "Sign in" flash before their account.
           <NavLink to="/login" className={styles.signIn}>
             Sign in
           </NavLink>

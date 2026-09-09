@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { analyzeScreenplay, createProject, recommendCastStream, ApiError } from "../api/client"
 import type { RolePresence } from "../api/types"
 import { useAppState } from "../state/AppStateContext"
+import { useAuth } from "../state/AuthContext"
 import { useHistory } from "../state/HistoryContext"
 import { Panel } from "../components/common/Panel"
 import { Button } from "../components/common/Button"
@@ -21,6 +22,7 @@ type Stage = "empty" | "ready" | "analyzing" | "reviewing" | "recommending"
 export function IngestPage() {
   const navigate = useNavigate()
   const { screenplay, projectId, setScreenplay, setReport, setProjectId } = useAppState()
+  const { user } = useAuth()
   const { refresh: refreshHistory } = useHistory()
   // Restore a screenplay dropped before a refresh -- cacheIngestFile only ever
   // stores one while `screenplay` is unset, so it only applies to that state.
@@ -75,12 +77,16 @@ export function IngestPage() {
       // history even if the user never runs the casting analysis. Failing to
       // save must not cost them the breakdown they just waited for, so this
       // stays out of the catch below.
-      try {
-        const project = await createProject(result)
-        setProjectId(project.id)
-        await refreshHistory()
-      } catch (historyError) {
-        console.error("Could not save this screenplay to history", historyError)
+      // History is per-account and signing in is optional, so an anonymous
+      // run simply isn't saved -- calling this would only 401.
+      if (user) {
+        try {
+          const project = await createProject(result)
+          setProjectId(project.id)
+          await refreshHistory()
+        } catch (historyError) {
+          console.error("Could not save this screenplay to history", historyError)
+        }
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reach the Raphael API. Is the server running?")

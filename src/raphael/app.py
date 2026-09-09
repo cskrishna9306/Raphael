@@ -2,6 +2,7 @@
 import json
 import traceback
 from contextlib import asynccontextmanager
+from typing import Optional
 
 # Import third-party packages
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
@@ -14,7 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from src.raphael.agentry.orchestrator import Raphael
 from src.raphael.agentry.utils import extract_text
 from src.raphael.agentry.screenplay_breakdown.models import Screenplay
-from src.raphael.auth import verify_token
+from src.raphael.auth import optional_claims, verify_token
 from src.raphael.config import config
 from src.raphael.history.models import Project, ProjectSummary
 from src.raphael.history.store import HistoryStore, ProjectNotFoundError
@@ -66,6 +67,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def _require_uid(claims: Optional[dict]) -> str:
+    """
+    Pulls the uid out of optional claims, refusing an anonymous request.
+
+    The pipeline endpoints accept anonymous callers (sign-in is optional), but
+    history is per-account -- there is no uid to file an anonymous run under,
+    so asking to save one is a real error rather than something to skip
+    silently.
+    """
+    if claims is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sign in to save a run to your history.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return claims["uid"]
+
 @app.get("/health")
 def health() -> dict:
     """
@@ -83,11 +101,13 @@ def ready() -> dict:
 @app.post("/analyze")
 async def analyze(
     file: UploadFile = File(...),
-    _claims: dict = Depends(verify_token),
+    _claims: Optional[dict] = Depends(optional_claims),
 ) -> Screenplay:
     """
     Runs just the screenplay breakdown step over an uploaded screenplay
-    document. Requires a Firebase ID token in the Authorization header.
+    document. Signing in is optional -- a Firebase ID token in the
+    Authorization header is verified if present, but its absence never
+    blocks the request (see optional_claims).
     """
 
     # In terms of the UI flow, this will be the first endpoint that will
@@ -100,26 +120,27 @@ async def analyze(
 async def recommend(
     screenplay: Screenplay,
     project_id: str | None = None,
-    claims: dict = Depends(verify_token),
+    claims: Optional[dict] = Depends(optional_claims),
 ) -> RecommendationReport:
     """
     Runs the rest of the pipeline (casting, enrichment, risk assessment,
     chemistry scoring, recommendation ranking) over a Screenplay produced by
-    /analyze, and returns the resulting RecommendationReport. Passing
-    ?project_id= also saves the report to that project's history. Requires a
-    Firebase ID token in the Authorization header.
+    /analyze, and returns the resulting RecommendationReport. Signing in is
+    optional -- see /analyze -- but passing ?project_id= to save the report to
+    history does require it, since history is per-account.
     """
 
     # Checked before the pipeline runs, not after: a bad project_id is a
     # caller mistake, and it costs minutes of casting/enrichment work to find
     # out about it on the way back out.
     save_to_project = project_id
+    uid = _require_uid(claims) if save_to_project is not None else None
     if save_to_project is not None:
         try:
             # HistoryStore is sync (see its class comment); this endpoint has
             # to stay async for the pipeline, so its two Firestore calls go
             # through the same threadpool the sync routes below get for free.
-            await run_in_threadpool(history.ensure_project_exists, claims["uid"], save_to_project)
+            await run_in_threadpool(history.ensure_project_exists, uid, save_to_project)
         except ProjectNotFoundError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No such project.")
         except Exception as e:
@@ -136,7 +157,7 @@ async def recommend(
         # handing it back unsaved beats failing the request and discarding it
         # over a storage problem the caller can't do anything about.
         try:
-            await run_in_threadpool(history.save_report, claims["uid"], save_to_project, report, screenplay)
+            await run_in_threadpool(history.save_report, uid, save_to_project, report, screenplay)
         except Exception as e:
             print(f"[history] Could not save report for project {save_to_project}: {e}")
 
@@ -193,7 +214,7 @@ def delete_project(
 async def recommend_stream(
     screenplay: Screenplay,
     project_id: str | None = None,
-    claims: dict = Depends(verify_token),
+    claims: Optional[dict] = Depends(optional_claims),
 ) -> StreamingResponse:
     """
     Streaming counterpart to /recommend: emits one SSE event per character
@@ -202,8 +223,8 @@ async def recommend_stream(
     then a final event carrying the same RecommendationReport /recommend
     returns (`{"type": "recommend_complete", "report"}`) -- lets the
     frontend show real per-character progress instead of a fake timed
-    loader while the casting search is in flight. Requires a Firebase ID
-    token in the Authorization header, same as /recommend.
+    loader while the casting search is in flight. Signing in is optional --
+    see /analyze.
 
     Errors surface as an in-stream `{"type": "error", "message"}` event
     rather than an HTTP error status -- by the time a failure can happen
@@ -214,9 +235,10 @@ async def recommend_stream(
     # status left to turn into a 404. Same reasoning as /recommend, which
     # validates before paying for the pipeline.
     save_to_project = project_id
+    uid = _require_uid(claims) if save_to_project is not None else None
     if save_to_project is not None:
         try:
-            await run_in_threadpool(history.ensure_project_exists, claims["uid"], save_to_project)
+            await run_in_threadpool(history.ensure_project_exists, uid, save_to_project)
         except ProjectNotFoundError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No such project.")
         except Exception as e:
@@ -236,7 +258,7 @@ async def recommend_stream(
                         # stop the report reaching the caller.
                         try:
                             await run_in_threadpool(
-                                history.save_report, claims["uid"], save_to_project, report, screenplay
+                                history.save_report, uid, save_to_project, report, screenplay
                             )
                         except Exception as e:
                             print(f"[history] Could not save report for project {save_to_project}: {e}")
@@ -247,13 +269,13 @@ async def recommend_stream(
     return StreamingResponse(event_source(), media_type="text/event-stream")
 
 @app.post("/swap")
-def swap(request: SwapRequest, _claims: dict = Depends(verify_token)) -> ClusterRecommendation:
+def swap(request: SwapRequest, _claims: Optional[dict] = Depends(optional_claims)) -> ClusterRecommendation:
     """
     Recomputes chemistry/risk for one cluster with a single character's
     candidate substituted in, using the Roster from an earlier
     RecommendationReport -- no agents, no ClickHouse, no Parallel calls, just
-    a deterministic recompute over data /recommend already produced. Requires
-    a Firebase ID token in the Authorization header, same as /recommend.
+    a deterministic recompute over data /recommend already produced. Signing
+    in is optional -- see /analyze.
     """
     risk_by_name = {assessment.name: assessment for assessment in request.roster.risk_assessments}
     try:
@@ -266,14 +288,14 @@ def swap(request: SwapRequest, _claims: dict = Depends(verify_token)) -> Cluster
     return raphael.recommendation_engine.build_single(cluster, request.roster.risk_assessments)
 
 @app.post("/swap/preview")
-def swap_preview(request: SwapPreviewRequest, _claims: dict = Depends(verify_token)) -> SwapPreviewResponse:
+def swap_preview(request: SwapPreviewRequest, _claims: Optional[dict] = Depends(optional_claims)) -> SwapPreviewResponse:
     """
     Scores every other candidate in one character's shortlist as a
     hypothetical swap, without committing to any of them -- so the frontend
     can show each alternative's real chemistry delta and a per-co-star
     breakdown before the user picks. Same deterministic recompute as /swap,
-    just over the whole shortlist instead of one chosen candidate. Requires
-    a Firebase ID token in the Authorization header, same as /recommend.
+    just over the whole shortlist instead of one chosen candidate. Signing
+    in is optional -- see /analyze.
     """
     risk_by_name = {assessment.name: assessment for assessment in request.roster.risk_assessments}
     previews = raphael.chemistry_engine.preview_swaps(
