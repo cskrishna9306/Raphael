@@ -1,6 +1,8 @@
 import { auth } from "../firebase"
 import type {
   ClusterRecommendation,
+  Project,
+  ProjectSummary,
   RecommendationReport,
   RecommendStreamEvent,
   Screenplay,
@@ -50,6 +52,27 @@ async function authHeader(): Promise<Record<string, string>> {
 }
 
 /**
+ * Runs one authenticated request, raising ApiError on a non-2xx response.
+ * Every endpoint below /health and /ready goes through here so the auth
+ * header and error shape stay in one place.
+ */
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: { ...(await authHeader()), ...init.headers },
+  })
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseErrorMessage(response))
+  }
+
+  // DELETE /projects/{id} answers 204 with no body to parse.
+  if (response.status === 204) return undefined as T
+
+  return (await response.json()) as T
+}
+
+/**
  * Checks the backend's liveness (/health) and readiness (/ready) probes.
  * Used only to drive the status banner -- never blocks or gates the
  * /analyze and /recommend calls themselves.
@@ -71,35 +94,55 @@ export async function analyzeScreenplay(file: File): Promise<Screenplay> {
   const formData = new FormData()
   formData.append("file", file)
 
-  const response = await fetch(`${API_BASE_URL}/analyze`, {
-    method: "POST",
-    headers: await authHeader(),
-    body: formData,
-  })
-
-  if (!response.ok) {
-    throw new ApiError(response.status, await parseErrorMessage(response))
-  }
-
-  return (await response.json()) as Screenplay
+  return request<Screenplay>("/analyze", { method: "POST", body: formData })
 }
 
 /**
  * Runs the casting/chemistry/risk pipeline: POST /recommend with the
  * Screenplay produced by analyzeScreenplay (optionally edited by the user).
+ * Passing `projectId` also saves the report to that project's history.
  */
-export async function recommendCast(screenplay: Screenplay): Promise<RecommendationReport> {
-  const response = await fetch(`${API_BASE_URL}/recommend`, {
+export async function recommendCast(screenplay: Screenplay, projectId?: string): Promise<RecommendationReport> {
+  const query = projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""
+
+  return request<RecommendationReport>(`/recommend${query}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeader()) },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(screenplay),
   })
+}
 
-  if (!response.ok) {
-    throw new ApiError(response.status, await parseErrorMessage(response))
-  }
+/**
+ * Saves a Screenplay as a new project, so the run shows up in history even
+ * if the user never gets as far as running the casting analysis.
+ */
+export async function createProject(screenplay: Screenplay): Promise<Project> {
+  return request<Project>("/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(screenplay),
+  })
+}
 
-  return (await response.json()) as RecommendationReport
+/**
+ * Lists the signed-in user's saved projects, most recently touched first.
+ */
+export async function listProjects(): Promise<ProjectSummary[]> {
+  return request<ProjectSummary[]>("/projects")
+}
+
+/**
+ * Reads one saved project, including its latest report if it has one.
+ */
+export async function getProject(projectId: string): Promise<Project> {
+  return request<Project>(`/projects/${encodeURIComponent(projectId)}`)
+}
+
+/**
+ * Permanently deletes one saved project and every report under it.
+ */
+export async function deleteProject(projectId: string): Promise<void> {
+  return request<void>(`/projects/${encodeURIComponent(projectId)}`, { method: "DELETE" })
 }
 
 /**
@@ -152,8 +195,13 @@ export async function previewSwaps(request: SwapPreviewRequest): Promise<SwapPre
 export async function recommendCastStream(
   screenplay: Screenplay,
   onProgress: (event: { character: string; completed: number; total: number }) => void,
+  projectId?: string,
 ): Promise<RecommendationReport> {
-  const response = await fetch(`${API_BASE_URL}/recommend/stream`, {
+  // Carries project_id for the same reason recommendCast does -- otherwise
+  // switching to the streaming path silently stops saving runs to history.
+  const query = projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""
+
+  const response = await fetch(`${API_BASE_URL}/recommend/stream${query}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(await authHeader()) },
     body: JSON.stringify(screenplay),

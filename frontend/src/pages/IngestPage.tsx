@@ -1,8 +1,10 @@
 import { useState, type DragEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { analyzeScreenplay, recommendCastStream, ApiError } from "../api/client"
+import { analyzeScreenplay, createProject, recommendCastStream, ApiError } from "../api/client"
 import type { RolePresence } from "../api/types"
 import { useAppState } from "../state/AppStateContext"
+import { useAuth } from "../state/AuthContext"
+import { useHistory } from "../state/HistoryContext"
 import { Panel } from "../components/common/Panel"
 import { Button } from "../components/common/Button"
 import { ErrorBanner } from "../components/common/ErrorBanner"
@@ -10,6 +12,7 @@ import { FileDropzone, isAcceptedFile } from "../components/ingest/FileDropzone"
 import { FileCard } from "../components/ingest/FileCard"
 import { CharacterList } from "../components/ingest/CharacterList"
 import { BreakdownSkeleton } from "../components/ingest/BreakdownSkeleton"
+import { BreakdownSummary } from "../components/ingest/BreakdownSummary"
 import { CastingAnalysisLoader } from "../components/ingest/CastingAnalysisLoader"
 import { cacheIngestFile, clearCachedIngestFile, loadCachedIngestFile } from "../utils/ingestFileCache"
 import styles from "./IngestPage.module.css"
@@ -18,7 +21,9 @@ type Stage = "empty" | "ready" | "analyzing" | "reviewing" | "recommending"
 
 export function IngestPage() {
   const navigate = useNavigate()
-  const { screenplay, setScreenplay, setReport } = useAppState()
+  const { screenplay, projectId, setScreenplay, setReport, setProjectId } = useAppState()
+  const { user } = useAuth()
+  const { refresh: refreshHistory } = useHistory()
   // Restore a screenplay dropped before a refresh -- cacheIngestFile only ever
   // stores one while `screenplay` is unset, so it only applies to that state.
   const [file, setFile] = useState<File | null>(() => (screenplay ? null : loadCachedIngestFile()))
@@ -67,6 +72,22 @@ export function IngestPage() {
       const result = await analyzeScreenplay(file)
       setScreenplay(result)
       setStage("reviewing")
+
+      // Saved as soon as the breakdown lands, so a screenplay shows up in
+      // history even if the user never runs the casting analysis. Failing to
+      // save must not cost them the breakdown they just waited for, so this
+      // stays out of the catch below.
+      // History is per-account and signing in is optional, so an anonymous
+      // run simply isn't saved -- calling this would only 401.
+      if (user) {
+        try {
+          const project = await createProject(result)
+          setProjectId(project.id)
+          await refreshHistory()
+        } catch (historyError) {
+          console.error("Could not save this screenplay to history", historyError)
+        }
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reach the Raphael API. Is the server running?")
       setStage("ready")
@@ -103,8 +124,10 @@ export function IngestPage() {
     setError(null)
     setCastingProgress(null)
     try {
-      const result = await recommendCastStream(screenplay, setCastingProgress)
+      const result = await recommendCastStream(screenplay, setCastingProgress, projectId ?? undefined)
       setReport(result)
+      // Flips this project's row to "Roster ready" and moves it to the top.
+      void refreshHistory()
       navigate("/roster")
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reach the Raphael API. Is the server running?")
@@ -135,14 +158,14 @@ export function IngestPage() {
               </div>
             ) : null}
             <Button variant={file ? "primary" : "secondary"} disabled={!file} onClick={handleRunBreakdown}>
-              RUN SCREENPLAY BREAKDOWN →
+              Run screenplay breakdown →
             </Button>
             <div className={styles.hint}>Reads scenes, roles and screen time.</div>
           </div>
         ) : (
           <div className={styles.splitView}>
             <div className={styles.leftColumn}>
-              <div className={styles.sectionLabel}>Screenplay</div>
+              {screenplay ? <BreakdownSummary screenplay={screenplay} /> : null}
               {file ? (
                 <FileCard
                   file={file}
@@ -151,39 +174,22 @@ export function IngestPage() {
                     handleClearFile()
                     setScreenplay(null)
                     setReport(null)
+                    // Detach from the saved project rather than deleting it --
+                    // it stays in history, this is just a fresh run.
+                    setProjectId(null)
                     setStage("empty")
                   }}
                   replaceDisabled={isBusy}
                 />
               ) : null}
-              {stage !== "analyzing" ? (
-                <div className={styles.statusRow}>
-                  <span className={styles.statusDot} />
-                  Breakdown complete{screenplay ? ` · ${screenplay.cast.characters.length} characters` : ""}
-                </div>
-              ) : null}
-            </div>
-            <div className={styles.rightColumn}>
-              <div className={styles.sectionLabel}>Breakdown</div>
-              {stage === "analyzing" || !screenplay ? (
-                <BreakdownSkeleton />
-              ) : (
-                <>
-                  <div className={styles.summaryCard}>
-                    <div className={styles.summaryTitleRow}>
-                      <div className={styles.summaryTitle}>{screenplay.title}</div>
-                    </div>
+              {screenplay && stage !== "analyzing" ? (
+                // The action lives beside the summary rather than under the
+                // cast list, so it stays reachable however long the list runs.
+                <div className={styles.actionBlock}>
+                  <div className={styles.statusRow}>
+                    <span className={styles.statusDot} />
+                    Breakdown complete
                   </div>
-                  <div className={styles.charactersHeader}>
-                    <span>Characters detected — {screenplay.cast.characters.length}</span>
-                    <span className={styles.charactersHint}>edit a role or cast a specific actor before casting</span>
-                  </div>
-                  <CharacterList
-                    characters={screenplay.cast.characters}
-                    onRoleChange={handleRoleChange}
-                    onPreferredActorChange={handlePreferredActorChange}
-                    disabled={isBusy}
-                  />
                   {stage === "recommending" ? (
                     <CastingAnalysisLoader progress={castingProgress} />
                   ) : (
@@ -192,9 +198,27 @@ export function IngestPage() {
                       disabled={isBusy || screenplay.cast.characters.length === 0}
                       onClick={handleRunCastingAnalysis}
                     >
-                      RUN CASTING ANALYSIS →
+                      Run casting analysis →
                     </Button>
                   )}
+                </div>
+              ) : null}
+            </div>
+            <div className={styles.rightColumn}>
+              {stage === "analyzing" || !screenplay ? (
+                <BreakdownSkeleton />
+              ) : (
+                <>
+                  <div className={styles.charactersHeader}>
+                    <span className={styles.sectionLabel}>Characters detected</span>
+                    <span className={styles.charactersHint}>Set a role, or cast an actor directly</span>
+                  </div>
+                  <CharacterList
+                    characters={screenplay.cast.characters}
+                    onRoleChange={handleRoleChange}
+                    onPreferredActorChange={handlePreferredActorChange}
+                    disabled={isBusy}
+                  />
                 </>
               )}
             </div>

@@ -5,6 +5,7 @@ import { riskAssessmentFor } from "../../utils/rosterGrouping"
 import { Avatar } from "../common/Avatar"
 import { RiskBadge } from "../common/RiskBadge"
 import { Shimmer } from "../common/Shimmer"
+import { toDisplayName } from "../../utils/format"
 import styles from "./ActorCard.module.css"
 
 interface ActorCardProps {
@@ -17,27 +18,40 @@ interface ActorCardProps {
   onPreview: () => Promise<SwapPreview[]>
   emphasize?: boolean
   size?: "lg" | "md" | "sm"
+  /** True while this actor is hovered anywhere else (e.g. the risk register). */
+  linked?: boolean
+  onLinkChange?: (name: string | null) => void
 }
 
-const AVATAR_SIZE: Record<NonNullable<ActorCardProps["size"]>, { width: number; height: number }> = {
-  lg: { width: 74, height: 92 },
-  md: { width: 56, height: 72 },
-  sm: { width: 56, height: 56 },
-}
+// One 2:3 headshot ratio at three scales, so faces crop identically down the
+// page instead of being squared off at one size and portrait at another.
+const AVATAR_WIDTH: Record<NonNullable<ActorCardProps["size"]>, number> = { lg: 72, md: 56, sm: 40 }
 
 function formatDelta(delta: number): string {
   const rounded = Math.round(delta * 100) / 100
   return `${rounded >= 0 ? "+" : ""}${rounded.toFixed(2)}`
 }
 
-export function ActorCard({ selection, risk, alternates, riskAssessments, swapping, onSwap, onPreview, emphasize, size = "md" }: ActorCardProps) {
+export function ActorCard({
+  selection,
+  risk,
+  alternates,
+  riskAssessments,
+  swapping,
+  onSwap,
+  onPreview,
+  emphasize,
+  size = "md",
+  linked,
+  onLinkChange,
+}: ActorCardProps) {
   const [showRationale, setShowRationale] = useState(false)
   const [showSwapPicker, setShowSwapPicker] = useState(false)
   const [previews, setPreviews] = useState<SwapPreview[] | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const { character, candidate } = selection
-  const avatar = AVATAR_SIZE[size]
+  const width = AVATAR_WIDTH[size]
 
   const canSwap = alternates.length > 0 && !swapping
 
@@ -82,43 +96,63 @@ export function ActorCard({ selection, risk, alternates, riskAssessments, swappi
       className={[
         styles.card,
         emphasize ? styles.emphasized : "",
-        size === "sm" ? styles.compact : "",
+        linked ? styles.linked : "",
         size === "lg" ? styles.large : "",
-      ].join(" ")}
-      onMouseEnter={() => setShowRationale(true)}
-      onMouseLeave={() => setShowRationale(false)}
+        size === "sm" ? styles.compact : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onMouseEnter={() => onLinkChange?.(candidate.name)}
+      onMouseLeave={() => onLinkChange?.(null)}
     >
       <div
-        className={[styles.body, canSwap ? styles.swappable : ""].join(" ")}
+        className={[styles.body, canSwap ? styles.swappable : ""].filter(Boolean).join(" ")}
         onClick={canSwap ? () => setShowSwapPicker((open) => !open) : undefined}
       >
-        <Avatar src={candidate.headshot_url} alt={candidate.name} width={avatar.width} height={avatar.height} />
+        <Avatar src={candidate.headshot_url} alt={candidate.name} width={width} height={Math.round(width * 1.5)} />
+
         <div className={styles.info}>
-          <div className={styles.characterLine}>
-            {character.name} · {character.role_presence}
-          </div>
+          {/* Character and role on their own lines: this mapping is the whole
+              product, and it used to truncate mid-word on both halves. */}
+          <div className={styles.character}>{toDisplayName(character.name)}</div>
           {swapping ? (
-            <Shimmer width="80%" height={16} />
+            <Shimmer width="80%" height={18} />
           ) : (
             <div className={styles.candidateName}>{candidate.name}</div>
           )}
-          {risk ? (
-            <div className={styles.riskRow}>
-              <RiskBadge level={risk.risk_level} />
-            </div>
-          ) : null}
-          {canSwap ? <span className={styles.swapHint}>⇄ Tap to swap</span> : null}
+          <div className={styles.metaRow}>
+            <span className={styles.role}>{character.role_presence}</span>
+            {risk ? <RiskBadge level={risk.risk_level} /> : null}
+          </div>
+          {canSwap ? <span className={styles.swapHint}>⇄ Swap</span> : null}
         </div>
       </div>
-      {showRationale && !showSwapPicker && candidate.fit_rationale ? (
-        <div className={styles.popover}>
-          <div className={styles.popoverLabel}>Fit rationale</div>
-          <div className={styles.popoverBody}>{candidate.fit_rationale}</div>
-        </div>
+
+      {/* Hidden while the picker is open so the two never stack on one card. */}
+      {candidate.fit_rationale && !showSwapPicker ? (
+        <>
+          {/* Was hover-only, so the reasoning -- the product's differentiator --
+              was unreachable by keyboard and invisible on touch. */}
+          <button
+            type="button"
+            className={styles.rationaleToggle}
+            aria-expanded={showRationale}
+            onClick={() => setShowRationale((open) => !open)}
+          >
+            <span className={styles.rationaleLead}>{candidate.fit_rationale}</span>
+            <span className={styles.rationaleChevron} aria-hidden="true">
+              {showRationale ? "−" : "+"}
+            </span>
+          </button>
+          {showRationale ? <div className={styles.rationaleFull}>{candidate.fit_rationale}</div> : null}
+        </>
       ) : null}
+
       {showSwapPicker ? (
         <div className={styles.popover}>
-          <div className={styles.popoverLabel}>Swap in for {character.name} · ranked by chemistry impact</div>
+          <div className={styles.popoverLabel}>
+            Swap in for {toDisplayName(character.name)} · ranked by chemistry impact
+          </div>
           <div className={styles.swapList}>
             {previewError ? (
               <div className={styles.swapError}>{previewError}</div>
@@ -140,8 +174,17 @@ export function ActorCard({ selection, risk, alternates, riskAssessments, swappi
                     <div className={styles.swapOptionRow}>
                       <span className={styles.swapOptionName}>{preview.candidate.name}</span>
                       <span
-                        className={[preview.delta >= 0 ? styles.deltaPositive : styles.deltaNegative, preview.estimated ? styles.estimated : ""].join(" ")}
-                        title={preview.estimated ? "No shared-credit history with this cast -- rough estimate, not observed evidence" : undefined}
+                        className={[
+                          preview.delta >= 0 ? styles.deltaPositive : styles.deltaNegative,
+                          preview.estimated ? styles.estimated : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        title={
+                          preview.estimated
+                            ? "No shared-credit history with this cast -- rough estimate, not observed evidence"
+                            : undefined
+                        }
                       >
                         {formatDelta(preview.delta)}
                         {preview.estimated ? "*" : ""}
@@ -151,11 +194,18 @@ export function ActorCard({ selection, risk, alternates, riskAssessments, swappi
                     {preview.per_costar.length > 0 || preview.estimated || preview.used_in_other_cluster ? (
                       <div className={styles.costarRow}>
                         {preview.per_costar.map((costar) => (
-                          <span key={costar.name} className={costar.delta >= 0 ? styles.deltaPositive : styles.deltaNegative}>
+                          <span
+                            key={costar.name}
+                            className={costar.delta >= 0 ? styles.deltaPositive : styles.deltaNegative}
+                          >
                             {costar.name} {formatDelta(costar.delta)}
                           </span>
                         ))}
-                        {preview.estimated ? <span className={styles.estimatedNote}>* no shared-credit history with this cast -- estimated</span> : null}
+                        {preview.estimated ? (
+                          <span className={styles.estimatedNote}>
+                            * no shared-credit history with this cast -- estimated
+                          </span>
+                        ) : null}
                         {preview.used_in_other_cluster ? (
                           <span className={styles.estimatedNote}>⚠ already leads another cluster</span>
                         ) : null}

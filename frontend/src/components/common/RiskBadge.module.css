@@ -1,46 +1,37 @@
+/* Severity has its own ramp, independent of --color-accent. Low is deliberately
+   uncoloured: an actor with no flags needs no attention, and colouring it the
+   brand accent (as this did) made "safe" and "emphasised" look identical. */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 2px solid var(--color-border-soft);
+  gap: 5px;
+  border: 1px solid currentColor;
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 1px 7px;
+  font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
   white-space: nowrap;
+  flex: none;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  background: var(--color-border-soft);
+  background: currentColor;
 }
 
 .low {
-  border-color: var(--color-border);
-  color: var(--color-text);
-}
-
-.low .dot {
-  background: var(--color-accent);
+  color: var(--color-risk-low);
 }
 
 .medium {
-  border-color: var(--color-border-soft);
-  color: var(--color-text-muted);
+  color: var(--color-risk-medium);
 }
 
-.medium .dot {
-  background: var(--color-border-soft);
-}
-
+/* Only the level that actually needs attention gets a fill. */
 .high {
-  border-color: var(--color-border);
-  background: var(--color-danger);
-  color: var(--color-text);
-}
-
-.high .dot {
-  background: var(--color-text);
+  color: var(--color-risk-high);
+  background: rgba(210, 96, 74, 0.14);
 }
