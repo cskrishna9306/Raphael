@@ -44,7 +44,7 @@ jobs:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
-          service_account: raphael@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+          flags: --service-account=raphael@${{ env.PROJECT_ID }}.iam.gserviceaccount.com --memory=1Gi
           env_vars: |
             GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
             GOOGLE_CLOUD_LOCATION=global
