@@ -11,8 +11,7 @@ from src.raphael.agentry.config import config
 from src.raphael.agentry.screenplay_breakdown.models import Screenplay, CharacterProfile, RolePresence
 from src.raphael.agentry.parallel.abstract import ParallelAbstractAgent
 from src.raphael.agentry.parallel.models import ParallelAgentType
-# PersonDossier import dropped -- only referenced by the commented-out
-# enrich_candidate below; re-add it alongside re-enabling that method.
+from src.raphael.tmdb.client import TMDBClient
 from src.raphael.agentry.casting_director.models import (
     CastingCandidate,
     CastingCharacter,
@@ -59,6 +58,9 @@ class CastingDirectorAgent:
         # Instantiate the Parallel sub-agent(s)
         self.search_agent = ParallelAbstractAgent(system_prompt=SEARCH_PROMPT, type=ParallelAgentType.SEARCH)
         # self.research_agent = ParallelAbstractAgent(system_prompt=RESEARCH_PROMPT, type=ParallelAgentType.RESEARCH)
+
+        # Headshot lookup for candidates
+        self.tmdb_client = TMDBClient()
 
         # Initialize the graph and its nodes
         graph = StateGraph(CastingDirectorState)
@@ -114,7 +116,7 @@ class CastingDirectorAgent:
         see fan_out) where an empty result is more likely search flakiness
         than a genuine "no real actor fits this" case.
         """
-        candidates = await self._search_and_structure(character_query(character), character.name)
+        candidates = await self.search_and_structure(character_query(character), character.name)
 
         if not candidates:
             broadened_query = character_query(character) + (
@@ -124,11 +126,11 @@ class CastingDirectorAgent:
                 "match isn't exact -- only decline again if truly no real actor search "
                 "result supports even a loose fit."
             )
-            candidates = await self._search_and_structure(broadened_query, character.name)
+            candidates = await self.search_and_structure(broadened_query, character.name)
 
         return candidates
 
-    async def _search_and_structure(self, query: str, character_name: str) -> list[CastingCandidate]:
+    async def search_and_structure(self, query: str, character_name: str) -> list[CastingCandidate]:
         """
         Runs one search + structuring pass for a character and returns
         whatever candidates it extracts (possibly none).
@@ -147,6 +149,17 @@ class CastingDirectorAgent:
 
         return result.candidates
 
+    async def attach_headshots(self, candidates: list[CastingCandidate]) -> list[CastingCandidate]:
+        """
+        Augment our current list of CastingCandidates w/ their respective headshot URLs.
+        """
+        headshot_urls = await asyncio.gather(
+            *(self.tmdb_client.find_headshot_url(candidate.name) for candidate in candidates)
+        )
+        for candidate, headshot_url in zip(candidates, headshot_urls):
+            candidate.headshot_url = headshot_url
+        return candidates
+
     async def search_candidates(self, state: CharacterSearchState) -> dict:
         """
         Finds candidates for a single character, each with a best-effort
@@ -164,6 +177,8 @@ class CastingDirectorAgent:
             ]
         else:
             candidates = await self.find_candidates(character)
+
+        candidates = await self.attach_headshots(candidates)
 
         # NOTE: Moved the deep research enrichment agent to exist as its own agent
         # Deep-research enrichment disabled -- see enrich_candidate above.

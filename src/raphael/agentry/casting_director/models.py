@@ -15,6 +15,7 @@ class CastingCandidate(BaseModel):
     name: str = Field(description="The candidate actor's full name.")
     fit_rationale: Optional[str] = Field(default=None, description="Brief reasoning for why this actor could play the role.")
     dossier: Optional[PersonDossier] = Field(default=None, description="Structured research dossier on this candidate, once researched.")
+    headshot_url: Optional[str] = Field(default=None, description="Direct URL to the candidate's headshot image (via TMDB), if a match was found.")
 
 
 class CastingCharacter(BaseModel):

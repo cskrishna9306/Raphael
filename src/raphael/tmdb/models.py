@@ -11,6 +11,15 @@ class MovieSearchResult(BaseModel):
     title: str = Field(description="Movie title")
 
 
+class PersonSearchResult(BaseModel):
+    """
+    A single hit from TMDB's /search/person endpoint.
+    """
+    id: int = Field(description="TMDB person id")
+    name: str = Field(description="Person's name")
+    profile_path: Optional[str] = Field(default=None, description="Relative path to the person's profile image, if TMDB has one on file")
+
+
 class CastMember(BaseModel):
     """
     One cast member on a movie's credits.
