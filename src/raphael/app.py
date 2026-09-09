@@ -2,13 +2,14 @@
 from contextlib import asynccontextmanager
 
 # Import third-party packages
-from fastapi import FastAPI, File, UploadFile
+from fastapi import Depends, FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import custom modules
 from src.raphael.agentry.orchestrator import Raphael
 from src.raphael.agentry.utils import extract_text
 from src.raphael.agentry.screenplay_breakdown.models import Screenplay
+from src.raphael.auth import verify_token
 from src.raphael.config import config
 from src.raphael.recommendation.models import RecommendationReport
 
@@ -51,11 +52,15 @@ def ready() -> dict:
     return {"status": "ok"}
 
 @app.post("/analyze")
-async def analyze(file: UploadFile = File(...)) -> Screenplay:
+async def analyze(
+    file: UploadFile = File(...),
+    _claims: dict = Depends(verify_token),
+) -> Screenplay:
     """
-    Runs just the screenplay breakdown step over an uploaded screenplay document.
+    Runs just the screenplay breakdown step over an uploaded screenplay
+    document. Requires a Firebase ID token in the Authorization header.
     """
-    
+
     # In terms of the UI flow, this will be the first endpoint that will
     # be triggered by our frontend
     content = await file.read()
@@ -63,10 +68,14 @@ async def analyze(file: UploadFile = File(...)) -> Screenplay:
     return await raphael.analyze(document)
 
 @app.post("/recommend")
-async def recommend(screenplay: Screenplay) -> RecommendationReport:
+async def recommend(
+    screenplay: Screenplay,
+    _claims: dict = Depends(verify_token),
+) -> RecommendationReport:
     """
     Runs the rest of the pipeline (casting, enrichment, risk assessment,
     chemistry scoring, recommendation ranking) over a Screenplay produced by
-    /analyze, and returns the resulting RecommendationReport.
+    /analyze, and returns the resulting RecommendationReport. Requires a
+    Firebase ID token in the Authorization header.
     """
     return await raphael.recommend(screenplay)
