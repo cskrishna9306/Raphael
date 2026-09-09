@@ -40,33 +40,30 @@ jobs:
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
 
-      - name: Write Cloud Run environment file
-        run: |
-          umask 077
-          cat > cloudrun.env <<'CLOUDRUN_ENV'
-          GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
-          GOOGLE_CLOUD_LOCATION=global
-          ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
-          CLICKHOUSE_HOST=${{ secrets.CLICKHOUSE_HOST }}
-          CLICKHOUSE_PORT=${{ secrets.CLICKHOUSE_PORT }}
-          CLICKHOUSE_USERNAME=${{ secrets.CLICKHOUSE_USERNAME }}
-          CLICKHOUSE_PASSWORD=${{ secrets.CLICKHOUSE_PASSWORD }}
-          CLICKHOUSE_ALLOW_WRITE_ACCESS=true
-          PARALLEL_API_KEY=${{ secrets.PARALLEL_API_KEY }}
-          PARALLEL_API_TIMEOUT=600
-          TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}
-          CLOUDRUN_ENV
-
       - uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
           flags: --service-account=raphael@${{ env.PROJECT_ID }}.iam.gserviceaccount.com --memory=1Gi --allow-unauthenticated
-          # Every variable goes through env_vars_file, not env_vars: env_vars
-          # splits entries on commas as well as newlines, which silently
-          # truncated ALLOWED_ORIGINS to its first origin and left the opening
-          # quote in the value. Quoting does not help -- the action splits
-          # before it strips. env_vars_file parses KEY=VALUE lines only, so a
-          # value is free to contain commas.
-          env_vars_file: cloudrun.env
+          # No value here may contain a comma. The action serialises every
+          # pair into a single `--update-env-vars ^,^K=V,K=V` argument, so a
+          # comma inside a value is read as the start of the next variable --
+          # which silently truncated ALLOWED_ORIGINS to its first origin and
+          # turned the rest into empty junk keys, disabling CORS in production.
+          # Quoting does not help, and neither does env_vars_file (also now
+          # deprecated): the action splits when it serialises, not when it
+          # parses. ALLOWED_ORIGINS is therefore space-separated -- see
+          # config._parse_origins, which accepts either separator.
+          env_vars: |
+            GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
+            GOOGLE_CLOUD_LOCATION=global
+            ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
+            CLICKHOUSE_HOST=${{ secrets.CLICKHOUSE_HOST }}
+            CLICKHOUSE_PORT=${{ secrets.CLICKHOUSE_PORT }}
+            CLICKHOUSE_USERNAME=${{ secrets.CLICKHOUSE_USERNAME }}
+            CLICKHOUSE_PASSWORD=${{ secrets.CLICKHOUSE_PASSWORD }}
+            CLICKHOUSE_ALLOW_WRITE_ACCESS=true
+            PARALLEL_API_KEY=${{ secrets.PARALLEL_API_KEY }}
+            PARALLEL_API_TIMEOUT=600
+            TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}
