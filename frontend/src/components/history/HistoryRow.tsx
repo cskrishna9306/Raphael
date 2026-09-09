@@ -1,5 +1,5 @@
 import type { ProjectSummary } from "../../api/types"
-import { formatRelativeTime } from "../../utils/format"
+import { formatRelativeTime, toDisplayTitle } from "../../utils/format"
 import styles from "./HistoryRow.module.css"
 
 interface HistoryRowProps {
@@ -38,7 +38,7 @@ export function HistoryRow({
         disabled={disabled}
         aria-current={isActive ? "true" : undefined}
       >
-        <span className={styles.title}>{project.title}</span>
+        <span className={styles.title}>{toDisplayTitle(project.title)}</span>
         <span className={styles.meta}>
           <span>
             {project.character_count} {project.character_count === 1 ? "character" : "characters"}
@@ -67,7 +67,7 @@ export function HistoryRow({
           className={styles.delete}
           onClick={onRequestDelete}
           disabled={disabled}
-          aria-label={`Delete ${project.title}`}
+          aria-label={`Delete ${toDisplayTitle(project.title)}`}
           title="Delete"
         >
           ×

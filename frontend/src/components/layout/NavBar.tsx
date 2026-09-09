@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom"
 import { useAppState } from "../../state/AppStateContext"
 import { useAuth } from "../../state/AuthContext"
+import { toDisplayTitle } from "../../utils/format"
 import styles from "./NavBar.module.css"
 
 const NAV_ITEMS = [{ to: "/", label: "About" }]
@@ -28,7 +29,7 @@ export function NavBar() {
           🎬
         </span>
         <span className={styles.name}>Raphael</span>
-        {screenplay ? <span className={styles.title}>/ {screenplay.title}</span> : null}
+        {screenplay ? <span className={styles.title}>/ {toDisplayTitle(screenplay.title)}</span> : null}
       </div>
       <nav className={styles.nav}>
         {NAV_ITEMS.map((item) => (

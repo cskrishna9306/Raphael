@@ -11,6 +11,7 @@ import { FileDropzone, isAcceptedFile } from "../components/ingest/FileDropzone"
 import { FileCard } from "../components/ingest/FileCard"
 import { CharacterList } from "../components/ingest/CharacterList"
 import { BreakdownSkeleton } from "../components/ingest/BreakdownSkeleton"
+import { BreakdownSummary } from "../components/ingest/BreakdownSummary"
 import { CastingAnalysisLoader } from "../components/ingest/CastingAnalysisLoader"
 import { cacheIngestFile, clearCachedIngestFile, loadCachedIngestFile } from "../utils/ingestFileCache"
 import styles from "./IngestPage.module.css"
@@ -149,14 +150,14 @@ export function IngestPage() {
               </div>
             ) : null}
             <Button variant={file ? "primary" : "secondary"} disabled={!file} onClick={handleRunBreakdown}>
-              RUN SCREENPLAY BREAKDOWN →
+              Run screenplay breakdown →
             </Button>
             <div className={styles.hint}>Reads scenes, roles and screen time.</div>
           </div>
         ) : (
           <div className={styles.splitView}>
             <div className={styles.leftColumn}>
-              <div className={styles.sectionLabel}>Screenplay</div>
+              {screenplay ? <BreakdownSummary screenplay={screenplay} /> : null}
               {file ? (
                 <FileCard
                   file={file}
@@ -173,34 +174,14 @@ export function IngestPage() {
                   replaceDisabled={isBusy}
                 />
               ) : null}
-              {stage !== "analyzing" ? (
-                <div className={styles.statusRow}>
-                  <span className={styles.statusDot} />
-                  Breakdown complete{screenplay ? ` · ${screenplay.cast.characters.length} characters` : ""}
-                </div>
-              ) : null}
-            </div>
-            <div className={styles.rightColumn}>
-              <div className={styles.sectionLabel}>Breakdown</div>
-              {stage === "analyzing" || !screenplay ? (
-                <BreakdownSkeleton />
-              ) : (
-                <>
-                  <div className={styles.summaryCard}>
-                    <div className={styles.summaryTitleRow}>
-                      <div className={styles.summaryTitle}>{screenplay.title}</div>
-                    </div>
+              {screenplay && stage !== "analyzing" ? (
+                // The action lives beside the summary rather than under the
+                // cast list, so it stays reachable however long the list runs.
+                <div className={styles.actionBlock}>
+                  <div className={styles.statusRow}>
+                    <span className={styles.statusDot} />
+                    Breakdown complete
                   </div>
-                  <div className={styles.charactersHeader}>
-                    <span>Characters detected — {screenplay.cast.characters.length}</span>
-                    <span className={styles.charactersHint}>edit a role or cast a specific actor before casting</span>
-                  </div>
-                  <CharacterList
-                    characters={screenplay.cast.characters}
-                    onRoleChange={handleRoleChange}
-                    onPreferredActorChange={handlePreferredActorChange}
-                    disabled={isBusy}
-                  />
                   {stage === "recommending" ? (
                     <CastingAnalysisLoader />
                   ) : (
@@ -209,9 +190,27 @@ export function IngestPage() {
                       disabled={isBusy || screenplay.cast.characters.length === 0}
                       onClick={handleRunCastingAnalysis}
                     >
-                      RUN CASTING ANALYSIS →
+                      Run casting analysis →
                     </Button>
                   )}
+                </div>
+              ) : null}
+            </div>
+            <div className={styles.rightColumn}>
+              {stage === "analyzing" || !screenplay ? (
+                <BreakdownSkeleton />
+              ) : (
+                <>
+                  <div className={styles.charactersHeader}>
+                    <span className={styles.sectionLabel}>Characters detected</span>
+                    <span className={styles.charactersHint}>Set a role, or cast an actor directly</span>
+                  </div>
+                  <CharacterList
+                    characters={screenplay.cast.characters}
+                    onRoleChange={handleRoleChange}
+                    onPreferredActorChange={handlePreferredActorChange}
+                    disabled={isBusy}
+                  />
                 </>
               )}
             </div>

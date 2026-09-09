@@ -1,94 +1,173 @@
 .row {
-  border: 2px solid var(--color-border-soft);
+  border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-md);
   background: var(--color-panel-inset);
-  padding: 11px 14px;
+  padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-3);
+  transition: border-color var(--dur) var(--ease);
 }
 
+.row:hover {
+  border-color: var(--color-border);
+}
+
+/* Leads carry a weight stripe rather than a heavier border, so the emphasis
+   reads as ranking rather than as a second kind of card. */
 .rowLead {
-  border-color: var(--color-border);
+  border-left: 3px solid var(--color-accent);
 }
 
-.mainLine {
+.head {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
-.roleSelect {
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  border: 2px solid var(--color-border-soft);
-  border-radius: var(--radius-sm);
-  background: var(--color-panel);
-  color: var(--color-text-muted);
-  padding: 2px 6px;
-  flex: none;
-}
-
-.rowLead .roleSelect {
-  border-color: var(--color-border);
-  color: var(--color-text);
+.identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .name {
-  flex: 1;
-  font-size: 13px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
-.traits {
-  font-size: 11px;
-  color: var(--color-text-faint);
-  text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 40%;
-}
-
-.actorToggle {
-  align-self: flex-start;
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  font-family: inherit;
-  max-width: 100%;
-}
-
-.actorChosen {
-  font-size: 11px;
-  color: var(--color-accent);
-}
-
-.actorPlaceholder {
-  font-size: 11px;
-  color: var(--color-text-faint);
-}
-
-.actorToggle:hover .actorPlaceholder {
+/* The breakdown's own summary of the part. Previously extracted by the API and
+   then dropped on the floor by the UI. */
+.description {
+  font-size: 12.5px;
+  line-height: 1.5;
   color: var(--color-text-muted);
 }
 
+.roles {
+  display: flex;
+  flex: none;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.role,
+.roleSelected {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  padding: 5px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-faint);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.role + .role,
+.role + .roleSelected,
+.roleSelected + .role {
+  border-left: 1px solid var(--color-border-soft);
+}
+
+.role:hover:not(:disabled) {
+  background: var(--color-track);
+  color: var(--color-text);
+}
+
+.roleSelected {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-weight: 600;
+}
+
+.role:disabled,
+.roleSelected:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.footRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.trait {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-faint);
+  border: 1px solid var(--color-border-dashed);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+}
+
+.actorToggle {
+  flex: none;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.actorToggle:hover:not(:disabled) {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.actorToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.actorChosen {
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.actorPlaceholder {
+  color: inherit;
+}
+
 .actorInput {
-  border: 2px solid var(--color-border);
+  flex: 1;
+  max-width: 260px;
+  border: 1px solid var(--color-accent);
   border-radius: var(--radius-sm);
   background: var(--color-panel);
   color: var(--color-text);
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 12px;
-  padding: 6px 8px;
-  width: 100%;
+  padding: 5px 8px;
 }
 
 .actorInput::placeholder {
   color: var(--color-text-faint);
+}
+
+@media (max-width: 560px) {
+  .head {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
 }

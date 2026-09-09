@@ -4,7 +4,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-soft);
   padding: 14px 20px;
   background: var(--color-panel);
 }
@@ -22,13 +22,16 @@
 }
 
 .name {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 
 .title {
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-style: italic;
   color: var(--color-text-faint);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -48,12 +51,12 @@
   align-items: center;
   gap: 8px;
   padding-left: 22px;
-  border-left: 2px dashed var(--color-border-dashed);
+  border-left: 1px solid var(--color-border-dashed);
 }
 
 .avatar {
   border-radius: 999px;
-  border: 2px solid var(--color-border-soft);
+  border: 1px solid var(--color-border-soft);
   flex: none;
 }
 
@@ -69,11 +72,11 @@
    the corner keeps its shape across both states. */
 .signOut,
 .signIn {
-  border: 2px solid var(--color-border-soft);
+  border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-sm);
   background: var(--color-panel-inset);
   color: var(--color-text-faint);
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 11px;
   letter-spacing: 0.06em;
   padding: 5px 10px;
@@ -126,5 +129,5 @@
 
 .linkActive {
   color: var(--color-text);
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 2px solid var(--color-accent);
 }

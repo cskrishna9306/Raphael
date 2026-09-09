@@ -3,27 +3,24 @@
   flex-direction: column;
 }
 
-.actionsRow {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 20px;
-  border-bottom: 2px dashed var(--color-border-dashed);
-  background: var(--color-panel-alt);
-}
-
 .body {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: minmax(0, 1fr) 300px;
 }
 
+/* The repeating 38px rule that used to sit behind this is gone: cards never
+   sat on that rhythm, so the lines passed behind them at arbitrary offsets and
+   read as an artefact rather than as texture. */
 .tree {
-  padding: 10px 30px 30px;
-  background: repeating-linear-gradient(0deg, var(--color-panel) 0 38px, #131518 38px 39px);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
   .body {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
