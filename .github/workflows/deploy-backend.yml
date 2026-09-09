@@ -1,0 +1,59 @@
+name: Deploy backend to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/raphael/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Dockerfile"
+      - ".github/workflows/deploy-backend.yml"
+
+env:
+  PROJECT_ID: cedar-calling-505608-s1
+  REGION: us-central1
+  REPOSITORY: raphael
+  SERVICE: raphael-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: "${{ secrets.GCP_SA_KEY_CLOUD_RUN_DEPLOY }}"
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and push image
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
+          service_account: raphael@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+          env_vars: |
+            GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
+            GOOGLE_CLOUD_LOCATION=global
+            ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
+            CLICKHOUSE_HOST=${{ secrets.CLICKHOUSE_HOST }}
+            CLICKHOUSE_PORT=${{ secrets.CLICKHOUSE_PORT }}
+            CLICKHOUSE_USERNAME=${{ secrets.CLICKHOUSE_USERNAME }}
+            CLICKHOUSE_PASSWORD=${{ secrets.CLICKHOUSE_PASSWORD }}
+            CLICKHOUSE_ALLOW_WRITE_ACCESS=true
+            PARALLEL_API_KEY=${{ secrets.PARALLEL_API_KEY }}
+            PARALLEL_API_TIMEOUT=600
+            TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}
