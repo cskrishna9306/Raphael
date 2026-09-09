@@ -1,3 +1,4 @@
+import { auth } from "../firebase"
 import type {
   ClusterRecommendation,
   RecommendationReport,
@@ -31,6 +32,19 @@ async function parseErrorMessage(response: Response): Promise<string> {
 }
 
 /**
+ * Builds the Authorization header the protected endpoints require. getIdToken
+ * hands back the cached ID token and refreshes it automatically once it is
+ * close to expiring, so callers never have to think about token lifetimes.
+ */
+async function authHeader(): Promise<Record<string, string>> {
+  const user = auth.currentUser
+  if (!user) {
+    throw new ApiError(401, "Your session has ended. Sign in again to continue.")
+  }
+  return { Authorization: `Bearer ${await user.getIdToken()}` }
+}
+
+/**
  * Checks the backend's liveness (/health) and readiness (/ready) probes.
  * Used only to drive the status banner -- never blocks or gates the
  * /analyze and /recommend calls themselves.
@@ -54,6 +68,7 @@ export async function analyzeScreenplay(file: File): Promise<Screenplay> {
 
   const response = await fetch(`${API_BASE_URL}/analyze`, {
     method: "POST",
+    headers: await authHeader(),
     body: formData,
   })
 
@@ -71,7 +86,7 @@ export async function analyzeScreenplay(file: File): Promise<Screenplay> {
 export async function recommendCast(screenplay: Screenplay): Promise<RecommendationReport> {
   const response = await fetch(`${API_BASE_URL}/recommend`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
     body: JSON.stringify(screenplay),
   })
 
@@ -90,7 +105,7 @@ export async function recommendCast(screenplay: Screenplay): Promise<Recommendat
 export async function swapCandidate(request: SwapRequest): Promise<ClusterRecommendation> {
   const response = await fetch(`${API_BASE_URL}/swap`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
     body: JSON.stringify(request),
   })
 
@@ -110,7 +125,7 @@ export async function swapCandidate(request: SwapRequest): Promise<ClusterRecomm
 export async function previewSwaps(request: SwapPreviewRequest): Promise<SwapPreviewResponse> {
   const response = await fetch(`${API_BASE_URL}/swap/preview`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
     body: JSON.stringify(request),
   })
 
@@ -135,7 +150,7 @@ export async function recommendCastStream(
 ): Promise<RecommendationReport> {
   const response = await fetch(`${API_BASE_URL}/recommend/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
     body: JSON.stringify(screenplay),
   })
 
