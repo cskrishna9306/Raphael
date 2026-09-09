@@ -32,7 +32,7 @@ class EnrichmentReport(BaseModel):
     title: Optional[str] = Field(default=None, description="Title of the source screenplay/casting report, carried through for display.")
     assessments: list[EnrichmentAssessment] = Field(default_factory=list, description="One dossier-bearing assessment per unique candidate actor.")
 
-    def merge_into(self, casting_report: CastingReport) -> CastingReport:
+    def merge_dossiers(self, casting_report: CastingReport) -> CastingReport:
         """
         Returns a new CastingReport with each candidate's dossier upgraded to
         this EnrichmentReport's version, by name, where one is available.

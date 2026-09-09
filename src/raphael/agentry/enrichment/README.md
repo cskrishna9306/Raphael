@@ -120,7 +120,7 @@ print(agent.graph)
 
 `Raphael.run_async` (`src/raphael/agentry/orchestrator.py`) runs this agent and
 `RiskManagementAgent` concurrently via `asyncio.gather` over the same `CastingReport`, then
-merges the enrichment dossiers back onto it (`EnrichmentReport.merge_into`, upgrading each
+merges the enrichment dossiers back onto it (`EnrichmentReport.merge_dossiers`, upgrading each
 candidate's shallow, search-prefilled dossier to the fuller researched/cached one where
 available), and finally runs `ChemistryEngine` over the enriched report — so chemistry
 scoring sees full filmography/collaborators data instead of whatever

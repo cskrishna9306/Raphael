@@ -97,7 +97,7 @@ class Raphael:
         # researched/cached one before scoring chemistry, so shared-credit scoring sees
         # full filmography/collaborators data. The raw EnrichmentReport is fully absorbed
         # here, so it isn't returned separately.
-        enriched_casting_report = enrichment_report.merge_into(casting_report)
+        enriched_casting_report = enrichment_report.merge_dossiers(casting_report)
         chemistry_report = self.chemistry_engine.invoke(enriched_casting_report)
         recommendations = self.recommendation_engine.invoke(chemistry_report, risk_report)
 
