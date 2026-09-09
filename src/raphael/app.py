@@ -299,6 +299,6 @@ def swap_preview(request: SwapPreviewRequest, _claims: Optional[dict] = Depends(
     """
     risk_by_name = {assessment.name: assessment for assessment in request.roster.risk_assessments}
     previews = raphael.chemistry_engine.preview_swaps(
-        request.roster.casting_report, request.selections, request.character_name, request.excluded_leads, risk_by_name
+        request.roster.casting_report, request.selections, request.character_name, request.used_elsewhere, risk_by_name
     )
     return SwapPreviewResponse(previews=previews)

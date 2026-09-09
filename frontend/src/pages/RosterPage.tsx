@@ -69,18 +69,18 @@ export function RosterPage() {
   }
 
   const handlePreview = async (characterName: string): Promise<SwapPreview[]> => {
-    // Lead actors already used in this report's OTHER clusters -- the backend only applies
-    // this exclusion when characterName is itself a lead role, so it's harmless to send for
-    // non-lead swaps too. Keeps a swap from reintroducing a duplicate lead across clusters.
-    const excludedLeads = report.recommendations
+    // Every actor already cast in this report's OTHER clusters, across every role -- flagged
+    // (not filtered out) on the returned previews via used_in_other_cluster. Keeps a swap from
+    // silently reintroducing a duplicate cast member across clusters.
+    const usedElsewhere = report.recommendations
       .filter((_, index) => index !== activeIndex)
-      .flatMap((r) => r.cluster.selections.filter((s) => s.character.role_presence === "lead").map((s) => s.candidate.name))
+      .flatMap((r) => r.cluster.selections.map((s) => s.candidate.name))
 
     const response = await previewSwaps({
       roster: report.roster,
       selections: recommendation.cluster.selections,
       character_name: characterName,
-      excluded_leads: excludedLeads,
+      used_elsewhere: usedElsewhere,
     })
     return response.previews
   }

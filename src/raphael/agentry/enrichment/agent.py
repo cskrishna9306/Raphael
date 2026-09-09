@@ -7,6 +7,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import Send
 
 # Import custom modules
+from src.raphael.agentry.config import config
 from src.raphael.clickhouse.handler import ClickHouseHandler
 from src.raphael.agentry.enrichment.search_agent import PersonSearchAgent
 from src.raphael.agentry.casting_director.models import CastingCandidate, CastingReport
@@ -170,15 +171,17 @@ class EnrichmentAgent:
         mode, since the second call's `async with` would overwrite
         self._handler mid-flight of the first.
         """
+        graph_config = {"max_concurrency": config.MAX_CONCURRENT_CANDIDATES}
+
         if not self._owns_handler:
             assert self._handler is not None, "EnrichmentAgent given no clickhouse_handler and none was injected before ainvoke()"
-            result = await self.graph.ainvoke({"casting_report": casting_report, "assessments": []})
+            result = await self.graph.ainvoke({"casting_report": casting_report, "assessments": []}, config=graph_config)
             return result["report"]
 
         async with ClickHouseHandler() as handler:
             self._handler = handler
             try:
-                result = await self.graph.ainvoke({"casting_report": casting_report, "assessments": []})
+                result = await self.graph.ainvoke({"casting_report": casting_report, "assessments": []}, config=graph_config)
             finally:
                 self._handler = None
         return result["report"]

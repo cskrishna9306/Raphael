@@ -58,13 +58,13 @@ class SwapPreviewRequest(BaseModel):
     roster: Roster = Field(description="The Roster from a prior RecommendationReport -- supplies every candidate's dossier for graph rebuilding.")
     selections: list[CastingSelection] = Field(description="The cluster's current selections (one candidate per character) to preview alternatives against.")
     character_name: str = Field(description="Which character's shortlist to preview alternatives for.")
-    excluded_leads: list[str] = Field(
+    used_elsewhere: list[str] = Field(
         default_factory=list,
         description=(
-            "Lead actors already used in this report's OTHER clusters -- dropped from the "
-            "alternates offered here, but only when character_name is itself a LEAD role. "
-            "Mirrors search_clusters' 'no actor leads more than one cluster' rule so swapping "
-            "can't reintroduce a duplicate lead across clusters."
+            "Actors already cast in this report's OTHER clusters, across every role -- flagged "
+            "(not dropped) on the alternates offered here via SwapPreview.used_in_other_cluster. "
+            "Mirrors search_clusters' 'no actor appears in more than one cluster' rule so the "
+            "picker can warn about, without blocking, a swap that would reintroduce a duplicate."
         ),
     )
 

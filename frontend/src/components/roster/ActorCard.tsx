@@ -207,7 +207,7 @@ export function ActorCard({
                           </span>
                         ) : null}
                         {preview.used_in_other_cluster ? (
-                          <span className={styles.estimatedNote}>⚠ already leads another cluster</span>
+                          <span className={styles.estimatedNote}>⚠ already cast in another cluster</span>
                         ) : null}
                       </div>
                     ) : null}
