@@ -1,8 +1,9 @@
 import { useState, type DragEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { analyzeScreenplay, recommendCast, ApiError } from "../api/client"
+import { analyzeScreenplay, createProject, recommendCast, ApiError } from "../api/client"
 import type { RolePresence } from "../api/types"
 import { useAppState } from "../state/AppStateContext"
+import { useHistory } from "../state/HistoryContext"
 import { Panel } from "../components/common/Panel"
 import { Button } from "../components/common/Button"
 import { ErrorBanner } from "../components/common/ErrorBanner"
@@ -18,7 +19,8 @@ type Stage = "empty" | "ready" | "analyzing" | "reviewing" | "recommending"
 
 export function IngestPage() {
   const navigate = useNavigate()
-  const { screenplay, setScreenplay, setReport } = useAppState()
+  const { screenplay, projectId, setScreenplay, setReport, setProjectId } = useAppState()
+  const { refresh: refreshHistory } = useHistory()
   // Restore a screenplay dropped before a refresh -- cacheIngestFile only ever
   // stores one while `screenplay` is unset, so it only applies to that state.
   const [file, setFile] = useState<File | null>(() => (screenplay ? null : loadCachedIngestFile()))
@@ -66,6 +68,18 @@ export function IngestPage() {
       const result = await analyzeScreenplay(file)
       setScreenplay(result)
       setStage("reviewing")
+
+      // Saved as soon as the breakdown lands, so a screenplay shows up in
+      // history even if the user never runs the casting analysis. Failing to
+      // save must not cost them the breakdown they just waited for, so this
+      // stays out of the catch below.
+      try {
+        const project = await createProject(result)
+        setProjectId(project.id)
+        await refreshHistory()
+      } catch (historyError) {
+        console.error("Could not save this screenplay to history", historyError)
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reach the Raphael API. Is the server running?")
       setStage("ready")
@@ -101,8 +115,10 @@ export function IngestPage() {
     setStage("recommending")
     setError(null)
     try {
-      const result = await recommendCast(screenplay)
+      const result = await recommendCast(screenplay, projectId ?? undefined)
       setReport(result)
+      // Flips this project's row to "Roster ready" and moves it to the top.
+      void refreshHistory()
       navigate("/roster")
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reach the Raphael API. Is the server running?")
@@ -149,6 +165,9 @@ export function IngestPage() {
                     handleClearFile()
                     setScreenplay(null)
                     setReport(null)
+                    // Detach from the saved project rather than deleting it --
+                    // it stays in history, this is just a fresh run.
+                    setProjectId(null)
                     setStage("empty")
                   }}
                   replaceDisabled={isBusy}

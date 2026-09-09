@@ -65,7 +65,10 @@
   white-space: nowrap;
 }
 
-.signOut {
+/* Signed out, .signIn occupies the same slot .signOut does when signed in, so
+   the corner keeps its shape across both states. */
+.signOut,
+.signIn {
   border: 2px solid var(--color-border-soft);
   border-radius: var(--radius-sm);
   background: var(--color-panel-inset);
@@ -79,6 +82,16 @@
 
 .signOut:hover {
   color: var(--color-text);
+}
+
+.signIn {
+  text-decoration: none;
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.signIn:hover {
+  opacity: 0.8;
 }
 
 @media (max-width: 480px) {

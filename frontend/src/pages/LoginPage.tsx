@@ -11,10 +11,12 @@ export function LoginPage() {
 
   if (initializing) return <div className={styles.page} aria-busy="true" />
 
-  // Send an already-signed-in user back to whichever page bounced them here.
+  // Send an already-signed-in user back to whichever page bounced them here,
+  // defaulting to ingest rather than "/" -- someone who came via the sign-in
+  // tab wants the app, not the About page they just left.
   if (user) {
     const from = (location.state as { from?: string } | null)?.from
-    return <Navigate to={from ?? "/"} replace />
+    return <Navigate to={from ?? "/ingest"} replace />
   }
 
   return (

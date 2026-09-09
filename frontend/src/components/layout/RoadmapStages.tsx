@@ -3,7 +3,7 @@ import { useAppState } from "../../state/AppStateContext"
 import styles from "./RoadmapStages.module.css"
 
 const STAGES = [
-  { to: "/", number: "01", label: "Ingest", body: "Break down the screenplay" },
+  { to: "/ingest", number: "01", label: "Ingest", body: "Break down the screenplay" },
   { to: "/roster", number: "02", label: "Roster", body: "Ranked cast clusters" },
 ]
 

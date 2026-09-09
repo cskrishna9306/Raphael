@@ -173,11 +173,22 @@ class HistoryStore:
         if not self._project(uid, project_id).get().exists:
             raise ProjectNotFoundError(project_id)
 
-    def save_report(self, uid: str, project_id: str, report: RecommendationReport) -> str:
+    def save_report(
+        self,
+        uid: str,
+        project_id: str,
+        report: RecommendationReport,
+        screenplay: Optional[Screenplay] = None,
+    ) -> str:
         """
         Stores a report against an existing project and marks it the latest,
         returning the new report's id. Raises ProjectNotFoundError for an
         unknown id, ReportTooLargeError if it won't fit in a document.
+
+        Passing `screenplay` also refreshes the project's stored breakdown --
+        the project is created right after /analyze, but the user can still
+        edit role_presence/preferred_actor before /recommend, and the stored
+        copy should be the one the report was actually built from.
         """
         project = self._project(uid, project_id)
         if not project.get().exists:
@@ -194,9 +205,14 @@ class HistoryStore:
         # them separately can leave a stored report the project never
         # references, which nothing would ever read or clean up.
         document = project.collection("reports").document()
+        update: dict[str, Any] = {"latest_report_id": document.id, "updated_at": SERVER_TIMESTAMP}
+        if screenplay is not None:
+            update["screenplay"] = screenplay.model_dump(mode="json")
+            update["character_count"] = len(screenplay.cast.characters)
+
         batch = self.client.batch()
         batch.set(document, {**payload, "created_at": SERVER_TIMESTAMP})
-        batch.update(project, {"latest_report_id": document.id, "updated_at": SERVER_TIMESTAMP})
+        batch.update(project, update)
         batch.commit()
 
         return document.id

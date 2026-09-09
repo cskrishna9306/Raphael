@@ -1,19 +1,24 @@
-import { NavLink } from "react-router-dom"
+import { NavLink, useNavigate } from "react-router-dom"
 import { useAppState } from "../../state/AppStateContext"
 import { useAuth } from "../../state/AuthContext"
 import styles from "./NavBar.module.css"
 
-const NAV_ITEMS = [{ to: "/about", label: "About" }]
+const NAV_ITEMS = [{ to: "/", label: "About" }]
 
 export function NavBar() {
   const { screenplay, reset } = useAppState()
-  const { user, signOut } = useAuth()
+  const { user, initializing, signOut } = useAuth()
+  const navigate = useNavigate()
 
   // Clear the screenplay and report on the way out so the next account to sign
   // in on this browser does not land on the previous one's roster.
   async function handleSignOut() {
     await signOut()
     reset()
+    // Land on the public About page. Without this the protected page we were
+    // on would bounce us to /login, which reads as an error rather than as
+    // having signed out successfully.
+    navigate("/")
   }
 
   return (
@@ -30,6 +35,9 @@ export function NavBar() {
           <NavLink
             key={item.to}
             to={item.to}
+            // `end` matters for "/": without it every route matches it as a
+            // prefix and About would read as active everywhere.
+            end
             className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
           >
             {item.label}
@@ -45,7 +53,13 @@ export function NavBar() {
               Sign out
             </button>
           </div>
-        ) : null}
+        ) : initializing ? null : (
+          // Held back until Firebase has resolved the session, so a returning
+          // user never sees "Sign in" flash before their account appears.
+          <NavLink to="/login" className={styles.signIn}>
+            Sign in
+          </NavLink>
+        )}
       </nav>
     </header>
   )
