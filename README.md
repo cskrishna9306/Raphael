@@ -32,12 +32,57 @@ curl http://localhost:8000/health
 # Readiness probe
 curl http://localhost:8000/ready
 
-# Run the full pipeline over a screenplay document (.txt or .pdf)
-curl -X POST http://localhost:8000/recommend \
+# Break down a screenplay document (.txt or .pdf) into a Screenplay
+curl -X POST http://localhost:8000/analyze \
+  -H "Authorization: Bearer $ID_TOKEN" \
   -F "file=@/path/to/screenplay.pdf"
+
+# Run the rest of the pipeline over that Screenplay
+curl -X POST http://localhost:8000/recommend \
+  -H "Authorization: Bearer $ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @screenplay.json
 ```
 
-`/recommend` returns a `RecommendationReport` JSON body: the ranked cast clusters along with each cluster's top actor risk assessments.
+Every endpoint below `/health` and `/ready` requires a Firebase ID token in the `Authorization` header. `/recommend` returns a `RecommendationReport` JSON body: the ranked cast clusters along with each cluster's top actor risk assessments.
+
+### Per-user history
+
+Saved screenplays and reports live in Cloud Firestore under `users/{uid}/projects`, scoped to the signed-in Google account. Firestore is reached only from the backend via the Admin SDK -- `firestore.rules` denies all direct client access.
+
+```bash
+# Save a Screenplay from /analyze as a project
+curl -X POST http://localhost:8000/projects \
+  -H "Authorization: Bearer $ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @screenplay.json
+
+# Run the pipeline and save the report against that project
+curl -X POST "http://localhost:8000/recommend?project_id=$PROJECT_ID" \
+  -H "Authorization: Bearer $ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @screenplay.json
+
+# List history / read one project with its latest report / delete one
+curl http://localhost:8000/projects -H "Authorization: Bearer $ID_TOKEN"
+curl http://localhost:8000/projects/$PROJECT_ID -H "Authorization: Bearer $ID_TOKEN"
+curl -X DELETE http://localhost:8000/projects/$PROJECT_ID -H "Authorization: Bearer $ID_TOKEN"
+```
+
+`project_id` is optional -- without it `/recommend` behaves exactly as before and saves nothing.
+
+One-time setup on a fresh GCP project:
+
+```bash
+gcloud services enable firestore.googleapis.com --project=cedar-calling-505608-s1
+gcloud firestore databases create --location=nam5 --project=cedar-calling-505608-s1
+gcloud projects add-iam-policy-binding cedar-calling-505608-s1 \
+  --member=serviceAccount:raphael@cedar-calling-505608-s1.iam.gserviceaccount.com \
+  --role=roles/datastore.user
+firebase deploy --only firestore:rules
+```
+
+To run against the local emulator instead, start it with `firebase emulators:start --only firestore` and export `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` before starting the server.
 
 ## Why Raphael?
 
