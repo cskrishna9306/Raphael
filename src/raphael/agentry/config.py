@@ -33,6 +33,9 @@ class Config:
 
         # The Vertex AI model ID used by the risk_management agent
         self.RISK_MANAGEMENT_MODEL_ID: str = "gemini-3.5-flash-lite"
+
+        # The Vertex AI model ID used by the enrichment agent's shallow-search fallback
+        self.ENRICHMENT_MODEL_ID: str = "gemini-3.5-flash-lite"
         
         # Set of supported documents that we can read
         self.SUPPORTED_EXTENSIONS: set[str] = (".txt", ".pdf")

@@ -1,4 +1,5 @@
 # Import standard packages
+from typing import TYPE_CHECKING
 from pydantic import BaseModel
 from io import BytesIO
 
@@ -12,7 +13,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 # Import custom modules
 from src.raphael.agentry.config import config
 from src.raphael.agentry.screenplay_breakdown.models import CharacterProfile
-from src.raphael.agentry.casting_director.models import CastingCandidate
+
+# CastingCandidate is only used for a type hint below (candidate_risk_query) -- a real
+# top-level import here creates a circular import (casting_director.agent imports
+# structuring_model from this module), which only "worked" before by accident of whichever
+# module happened to import casting_director first. TYPE_CHECKING keeps the annotation
+# without the runtime import.
+if TYPE_CHECKING:
+    from src.raphael.agentry.casting_director.models import CastingCandidate
 
 def structuring_model(schema: type[BaseModel], model_id: str = config.MODEL_ID):
     """
@@ -38,7 +46,7 @@ def character_query(character: CharacterProfile) -> str:
         f"Traits: {', '.join(character.traits) if character.traits else 'unspecified'}"
     )
 
-def candidate_risk_query(candidate: CastingCandidate) -> str:
+def candidate_risk_query(candidate: "CastingCandidate") -> str:
     """
     Builds a risk-research search query for a single casting candidate.
     """
