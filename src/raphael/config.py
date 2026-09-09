@@ -18,12 +18,11 @@ class Config:
         self.HOST: str = os.getenv("HOST", "0.0.0.0")
         self.PORT: int = int(os.getenv("PORT", "8000"))
 
-        # Comma-separated origins allowed to call this API cross-origin (the
-        # frontend's dev server and, once deployed, its real origin).
+        # Origins allowed to call this API cross-origin
+        # Frontend's local dev server and, once deployed, its real origin
         self.ALLOWED_ORIGINS: list[str] = [
-            origin.strip()
-            for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
-            if origin.strip()
+            "http://localhost:5173",
+            "https://raphael.saichaparala.com"
         ]
 
         return
