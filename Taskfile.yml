@@ -1,6 +1,12 @@
 version: "3"
 
 tasks:
+  install:
+    desc: Install backend (uv) and frontend (npm) dependencies
+    cmds:
+      - uv sync
+      - npm install --prefix frontend
+
   launch-ui:
     desc: Launch the frontend dev server
     dir: frontend
