@@ -1,14 +1,17 @@
 .card {
   position: relative;
   width: 208px;
+  max-width: 100%;
 }
 
 .large {
   width: 280px;
+  max-width: 100%;
 }
 
 .compact {
   width: 150px;
+  max-width: 100%;
 }
 
 .body {

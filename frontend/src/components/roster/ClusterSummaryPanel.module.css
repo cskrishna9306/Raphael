@@ -39,3 +39,10 @@
   color: var(--color-text-faint);
   text-transform: capitalize;
 }
+
+@media (max-width: 900px) {
+  .panel {
+    border-left: none;
+    border-top: 2px dashed var(--color-border-dashed);
+  }
+}

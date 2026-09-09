@@ -159,6 +159,20 @@
   max-width: 420px;
 }
 
+@media (max-width: 1100px) {
+  .steps {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .step,
+  .step:first-child,
+  .step:last-child {
+    border-left-width: 2px;
+    border-radius: var(--radius-md);
+  }
+}
+
 @media (max-width: 800px) {
   .steps,
   .twoColumn,
@@ -166,8 +180,13 @@
     grid-template-columns: 1fr;
   }
 
-  .step {
-    border-left-width: 2px;
+  .steps {
+    gap: 0;
+  }
+
+  .step,
+  .step:first-child,
+  .step:last-child {
     border-radius: 0;
   }
 
