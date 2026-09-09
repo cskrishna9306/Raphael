@@ -13,9 +13,8 @@ const AppStateContext = createContext<AppState | null>(null)
 
 /**
  * Holds the two pieces of state produced by the pipeline (the Screenplay
- * from /analyze, the RecommendationReport from /recommend) so the Roster and
- * Casting sheet pages can read them without re-fetching or prop-drilling
- * through the router.
+ * from /analyze, the RecommendationReport from /recommend) so the Roster page
+ * can read them without re-fetching or prop-drilling through the router.
  */
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [screenplay, setScreenplay] = useState<Screenplay | null>(null)

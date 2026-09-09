@@ -1,0 +1,124 @@
+.roadmap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  list-style: none;
+  margin: 0;
+  padding: 6px 0 0;
+}
+
+.stage {
+  min-width: 0;
+}
+
+.stageInner {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  height: 14px;
+  margin-bottom: 5px;
+}
+
+/* Connector rule running right from this stage's node to the next one. */
+.track::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: var(--color-track);
+}
+
+.stage:last-child .track::after {
+  display: none;
+}
+
+.stageAdvanced .track::after {
+  background: var(--color-accent);
+}
+
+.node,
+.nodeReached {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 999px;
+  border: 2px solid var(--color-border-soft);
+  background: var(--color-bg);
+  margin-right: 10px;
+}
+
+.nodeReached {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.stage[aria-current="step"] .nodeReached {
+  box-shadow:
+    0 0 0 3px var(--color-bg),
+    0 0 0 5px var(--color-accent);
+}
+
+.number {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.stage[aria-current="step"] .number {
+  color: var(--color-accent);
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+}
+
+.stageReached .label {
+  color: var(--color-text);
+}
+
+.body {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.stageInner:hover .label {
+  color: var(--color-text);
+}
+
+.stageLocked .stageInner {
+  cursor: default;
+}
+
+.stageLocked .label,
+.stageLocked .body,
+.stageLocked .stageInner:hover .label {
+  color: var(--color-text-faint);
+}
+
+@media (max-width: 480px) {
+  .roadmap {
+    padding-top: 2px;
+  }
+
+  .label {
+    font-size: 13px;
+  }
+
+  .body {
+    font-size: 11px;
+  }
+
+  .node,
+  .nodeReached {
+    margin-right: 8px;
+  }
+}
