@@ -3,7 +3,7 @@ import json
 from contextlib import asynccontextmanager
 
 # Import third-party packages
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from src.raphael.agentry.orchestrator import Raphael
 from src.raphael.agentry.utils import extract_text
 from src.raphael.agentry.screenplay_breakdown.models import Screenplay
+from src.raphael.auth import verify_token
 from src.raphael.config import config
 from src.raphael.recommendation.models import (
     ClusterRecommendation,
@@ -59,11 +60,15 @@ def ready() -> dict:
     return {"status": "ok"}
 
 @app.post("/analyze")
-async def analyze(file: UploadFile = File(...)) -> Screenplay:
+async def analyze(
+    file: UploadFile = File(...),
+    _claims: dict = Depends(verify_token),
+) -> Screenplay:
     """
-    Runs just the screenplay breakdown step over an uploaded screenplay document.
+    Runs just the screenplay breakdown step over an uploaded screenplay
+    document. Requires a Firebase ID token in the Authorization header.
     """
-    
+
     # In terms of the UI flow, this will be the first endpoint that will
     # be triggered by our frontend
     content = await file.read()
@@ -71,16 +76,23 @@ async def analyze(file: UploadFile = File(...)) -> Screenplay:
     return await raphael.analyze(document)
 
 @app.post("/recommend")
-async def recommend(screenplay: Screenplay) -> RecommendationReport:
+async def recommend(
+    screenplay: Screenplay,
+    _claims: dict = Depends(verify_token),
+) -> RecommendationReport:
     """
     Runs the rest of the pipeline (casting, enrichment, risk assessment,
     chemistry scoring, recommendation ranking) over a Screenplay produced by
-    /analyze, and returns the resulting RecommendationReport.
+    /analyze, and returns the resulting RecommendationReport. Requires a
+    Firebase ID token in the Authorization header.
     """
     return await raphael.recommend(screenplay)
 
 @app.post("/recommend/stream")
-async def recommend_stream(screenplay: Screenplay) -> StreamingResponse:
+async def recommend_stream(
+    screenplay: Screenplay,
+    _claims: dict = Depends(verify_token),
+) -> StreamingResponse:
     """
     Streaming counterpart to /recommend: emits one SSE event per character
     as casting_director finishes searching for them
@@ -88,7 +100,8 @@ async def recommend_stream(screenplay: Screenplay) -> StreamingResponse:
     then a final event carrying the same RecommendationReport /recommend
     returns (`{"type": "recommend_complete", "report"}`) -- lets the
     frontend show real per-character progress instead of a fake timed
-    loader while the casting search is in flight.
+    loader while the casting search is in flight. Requires a Firebase ID
+    token in the Authorization header, same as /recommend.
 
     Errors surface as an in-stream `{"type": "error", "message"}` event
     rather than an HTTP error status -- by the time a failure can happen
@@ -108,12 +121,13 @@ async def recommend_stream(screenplay: Screenplay) -> StreamingResponse:
     return StreamingResponse(event_source(), media_type="text/event-stream")
 
 @app.post("/swap")
-def swap(request: SwapRequest) -> ClusterRecommendation:
+def swap(request: SwapRequest, _claims: dict = Depends(verify_token)) -> ClusterRecommendation:
     """
     Recomputes chemistry/risk for one cluster with a single character's
     candidate substituted in, using the Roster from an earlier
     RecommendationReport -- no agents, no ClickHouse, no Parallel calls, just
-    a deterministic recompute over data /recommend already produced.
+    a deterministic recompute over data /recommend already produced. Requires
+    a Firebase ID token in the Authorization header, same as /recommend.
     """
     risk_by_name = {assessment.name: assessment for assessment in request.roster.risk_assessments}
     try:
@@ -126,13 +140,14 @@ def swap(request: SwapRequest) -> ClusterRecommendation:
     return raphael.recommendation_engine.build_single(cluster, request.roster.risk_assessments)
 
 @app.post("/swap/preview")
-def swap_preview(request: SwapPreviewRequest) -> SwapPreviewResponse:
+def swap_preview(request: SwapPreviewRequest, _claims: dict = Depends(verify_token)) -> SwapPreviewResponse:
     """
     Scores every other candidate in one character's shortlist as a
     hypothetical swap, without committing to any of them -- so the frontend
     can show each alternative's real chemistry delta and a per-co-star
     breakdown before the user picks. Same deterministic recompute as /swap,
-    just over the whole shortlist instead of one chosen candidate.
+    just over the whole shortlist instead of one chosen candidate. Requires
+    a Firebase ID token in the Authorization header, same as /recommend.
     """
     risk_by_name = {assessment.name: assessment for assessment in request.roster.risk_assessments}
     previews = raphael.chemistry_engine.preview_swaps(
