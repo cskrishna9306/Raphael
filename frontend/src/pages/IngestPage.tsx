@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type DragEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { analyzeScreenplay, recommendCast, ApiError } from "../api/client"
 import type { RolePresence } from "../api/types"
@@ -6,10 +6,12 @@ import { useAppState } from "../state/AppStateContext"
 import { Panel } from "../components/common/Panel"
 import { Button } from "../components/common/Button"
 import { ErrorBanner } from "../components/common/ErrorBanner"
-import { FileDropzone } from "../components/ingest/FileDropzone"
+import { FileDropzone, isAcceptedFile } from "../components/ingest/FileDropzone"
 import { FileCard } from "../components/ingest/FileCard"
 import { CharacterList } from "../components/ingest/CharacterList"
 import { BreakdownSkeleton } from "../components/ingest/BreakdownSkeleton"
+import { CastingAnalysisLoader } from "../components/ingest/CastingAnalysisLoader"
+import { cacheIngestFile, clearCachedIngestFile, loadCachedIngestFile } from "../utils/ingestFileCache"
 import styles from "./IngestPage.module.css"
 
 type Stage = "empty" | "ready" | "analyzing" | "reviewing" | "recommending"
@@ -17,14 +19,43 @@ type Stage = "empty" | "ready" | "analyzing" | "reviewing" | "recommending"
 export function IngestPage() {
   const navigate = useNavigate()
   const { screenplay, setScreenplay, setReport } = useAppState()
-  const [stage, setStage] = useState<Stage>(screenplay ? "reviewing" : "empty")
-  const [file, setFile] = useState<File | null>(null)
+  // Restore a screenplay dropped before a refresh -- cacheIngestFile only ever
+  // stores one while `screenplay` is unset, so it only applies to that state.
+  const [file, setFile] = useState<File | null>(() => (screenplay ? null : loadCachedIngestFile()))
+  const [stage, setStage] = useState<Stage>(() => {
+    if (screenplay) return "reviewing"
+    return file ? "ready" : "empty"
+  })
   const [error, setError] = useState<string | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
 
   function handleFileSelected(nextFile: File) {
     setFile(nextFile)
     setError(null)
     setStage("ready")
+    void cacheIngestFile(nextFile)
+  }
+
+  function handleClearFile() {
+    setFile(null)
+    clearCachedIngestFile()
+  }
+
+  function handleDropzoneDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsDragOver(true)
+  }
+
+  function handleDropzoneDragLeave(event: DragEvent<HTMLDivElement>) {
+    if (event.currentTarget.contains(event.relatedTarget as Node)) return
+    setIsDragOver(false)
+  }
+
+  function handleDropzoneDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsDragOver(false)
+    const droppedFile = event.dataTransfer.files[0]
+    if (droppedFile && isAcceptedFile(droppedFile)) handleFileSelected(droppedFile)
   }
 
   async function handleRunBreakdown() {
@@ -85,15 +116,20 @@ export function IngestPage() {
     <div className={styles.page}>
       <Panel className={styles.panel}>
         {!screenplay && stage !== "analyzing" ? (
-          <div className={styles.emptyState}>
+          <div
+            className={styles.emptyState}
+            onDragOver={handleDropzoneDragOver}
+            onDragLeave={handleDropzoneDragLeave}
+            onDrop={handleDropzoneDrop}
+          >
             <div className={styles.heading}>
               <div className={styles.headline}>Every cast starts with a page</div>
               <div className={styles.subhead}>Drop your screenplay below and Raphael will analyze it!</div>
             </div>
-            <FileDropzone onFileSelected={handleFileSelected} />
+            <FileDropzone onFileSelected={handleFileSelected} isDragOver={isDragOver} />
             {file ? (
               <div className={styles.readyRow}>
-                <FileCard file={file} status="uploaded" onReplace={() => setFile(null)} />
+                <FileCard file={file} status="uploaded" onReplace={handleClearFile} />
               </div>
             ) : null}
             <Button variant={file ? "primary" : "secondary"} disabled={!file} onClick={handleRunBreakdown}>
@@ -110,7 +146,7 @@ export function IngestPage() {
                   file={file}
                   status={stage === "analyzing" ? "reading" : "uploaded"}
                   onReplace={() => {
-                    setFile(null)
+                    handleClearFile()
                     setScreenplay(null)
                     setReport(null)
                     setStage("empty")
@@ -146,13 +182,17 @@ export function IngestPage() {
                     onPreferredActorChange={handlePreferredActorChange}
                     disabled={isBusy}
                   />
-                  <Button
-                    variant="primary"
-                    disabled={isBusy || screenplay.cast.characters.length === 0}
-                    onClick={handleRunCastingAnalysis}
-                  >
-                    {stage === "recommending" ? "RUNNING CASTING ANALYSIS…" : "RUN CASTING ANALYSIS →"}
-                  </Button>
+                  {stage === "recommending" ? (
+                    <CastingAnalysisLoader />
+                  ) : (
+                    <Button
+                      variant="primary"
+                      disabled={isBusy || screenplay.cast.characters.length === 0}
+                      onClick={handleRunCastingAnalysis}
+                    >
+                      RUN CASTING ANALYSIS →
+                    </Button>
+                  )}
                 </>
               )}
             </div>

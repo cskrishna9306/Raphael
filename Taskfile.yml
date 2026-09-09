@@ -1,0 +1,37 @@
+version: "3"
+
+tasks:
+  launch-ui:
+    desc: Launch the frontend dev server
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  launch-server:
+    desc: Launch the backend FastAPI server
+    cmds:
+      - uv run python -m src.raphael.main
+
+  run:
+    desc: Launch the frontend and backend together
+    deps:
+      - frontend
+      - backend
+
+  lint:
+    desc: Lint the frontend (oxlint)
+    dir: frontend
+    cmds:
+      - npm run lint
+
+  typecheck:
+    desc: Type-check the frontend (tsc)
+    dir: frontend
+    cmds:
+      - npx tsc --noEmit -p .
+
+  check:
+    desc: Run all lint and type checks
+    deps:
+      - lint
+      - typecheck
