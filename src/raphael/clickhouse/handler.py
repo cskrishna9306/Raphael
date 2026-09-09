@@ -1,6 +1,6 @@
 # Import standard packages
 import json
-from typing import Any, Optional, Union
+from typing import Any, Awaitable, Callable, Optional, Union
 
 # Import custom packages
 from src.raphael.clickhouse.client import ClickHouseClient
@@ -542,7 +542,7 @@ class ClickHouseHandler:
 
     async def find_or_research_dossier(
         self,
-        parallel_client: ParallelClient,
+        research_person: Callable[..., Awaitable[Optional[PersonDossier]]],
         name: str,
         additional_context: Optional[str] = None,
     ) -> tuple[Optional[PersonDossier], bool]:
@@ -555,18 +555,22 @@ class ClickHouseHandler:
 
         On a cache hit: reconstructs the dossier via get_dossier() (a
         3-table join: people + credits + collaborations).
-        On a cache miss: researches via parallel_client.aresearch_person(),
-        stores via insert_person() (identical to find_or_research_person's
-        miss path), and returns the fresh, already-full-fidelity dossier
-        object directly -- no need to re-query ClickHouse, since the whole
-        object is already in hand. This keeps the miss path to the same
-        query cost as find_or_research_person's miss path.
+        On a cache miss: builds a fresh dossier via `research_person(name,
+        additional_context=...)` -- an injected async callable rather than a
+        hardcoded deep-research call, so callers control *how* a miss gets
+        researched. EnrichmentAgent passes PersonSearchAgent.research (a
+        shallow Parallel search, not deep research) here; nothing in this
+        method cares which strategy it is. The result is stored via
+        insert_person() (identical to find_or_research_person's miss path)
+        and returned directly -- no need to re-query ClickHouse, since the
+        whole object is already in hand.
 
         Returns (dossier, was_cache_hit) -- (None, False) if lookup/research/
         storage failed at any step.
 
-        Does not modify or replace find_or_research_person(), which main.py's
-        CLI demos depend on for its exact raw-row return shape -- this is an
+        Does not modify or replace find_or_research_person(), which the
+        etl/populate.py CLI tools depend on for its exact raw-row return
+        shape and its own hardcoded deep-research call -- this is an
         additive sibling method, sharing the same canonicalization helpers.
 
         Same known limitation as find_or_research_person(): an already-stored
@@ -580,7 +584,7 @@ class ClickHouseHandler:
             dossier = await self.get_dossier(canonical_name)
             return dossier, True
 
-        dossier = await parallel_client.aresearch_person(name, additional_context=additional_context)
+        dossier = await research_person(name, additional_context=additional_context)
         if dossier is None:
             return None, False
 

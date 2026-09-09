@@ -12,19 +12,19 @@ from src.raphael.agentry.parallel.models import PersonDossier
 class EnrichmentSource(Enum):
     """Where an EnrichmentAssessment's dossier came from."""
     CACHE = "cache"
-    RESEARCH = "research"
+    SEARCH = "search"
     FAILED = "failed"
 
 
 class EnrichmentAssessment(BaseModel):
     """
     Enrichment result for a single actor -- their full research dossier,
-    either reconstructed from ClickHouse or freshly researched via Parallel,
-    plus which of those paths produced it.
+    either reconstructed from ClickHouse or freshly found via a shallow
+    Parallel search, plus which of those paths produced it.
     """
     name: str = Field(description="The candidate actor's full name -- matches CastingCandidate.name, the join key back to casting data.")
     dossier: Optional[PersonDossier] = Field(default=None, description="Full research dossier for this candidate; None only if source is FAILED.")
-    source: EnrichmentSource = Field(description="Whether the dossier was served from ClickHouse, freshly researched, or unavailable.")
+    source: EnrichmentSource = Field(description="Whether the dossier was served from ClickHouse, freshly found via shallow search, or unavailable.")
 
 
 class EnrichmentReport(BaseModel):

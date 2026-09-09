@@ -8,7 +8,7 @@ from langgraph.types import Send
 
 # Import custom modules
 from src.raphael.clickhouse.handler import ClickHouseHandler
-from src.raphael.parallel.client import ParallelClient
+from src.raphael.agentry.enrichment.search_agent import PersonSearchAgent
 from src.raphael.agentry.casting_director.models import CastingCandidate, CastingReport
 from src.raphael.agentry.enrichment.models import (
     EnrichmentAssessment,
@@ -28,10 +28,12 @@ class EnrichmentAgent:
     returns an EnrichmentReport keyed by actor name.
 
     Mirrors RiskManagementAgent's shape (StateGraph, fan_out via Send, a
-    build_report reduce node, async-only with a sync invoke() wrapper), but
-    needs no LLM/structuring_model() call and no ParallelAbstractAgent
-    sub-agent -- "research" is a direct SDK-level ParallelClient call,
-    already encapsulated inside ClickHouseHandler.find_or_research_dossier.
+    build_report reduce node, async-only with a sync invoke() wrapper). A
+    cache miss is resolved via PersonSearchAgent -- a shallow Parallel search
+    + Gemini structuring call, the same shape RiskManagementAgent/
+    CastingDirectorAgent already use for their own searches -- never deep
+    research (ParallelClient.aresearch_person). Deep research stays reserved
+    for the offline etl/populate.py CLI tools (find_or_research_person).
 
     ClickHouseHandler is an async context manager wrapping a live MCP
     subprocess/session, so it can't be opened in a sync __init__. There are
@@ -55,24 +57,24 @@ class EnrichmentAgent:
 
     def __init__(
         self,
-        parallel_client: Optional[ParallelClient] = None,
+        person_search_agent: Optional[PersonSearchAgent] = None,
         clickhouse_handler: Optional[ClickHouseHandler] = None,
     ):
         """
         Builds the enrichment graph: fan out over unique candidates, then
-        per candidate look up (or research + store) a dossier, then reduce
-        into an EnrichmentReport.
+        per candidate look up (or shallow-search + store) a dossier, then
+        reduce into an EnrichmentReport.
 
-        ParallelClient is cheap/stateless (lazy API clients -- see
-        ParallelClient.client/.async_client) so it's safe to build once
-        here, same as RiskManagementAgent builds its search_agent once.
+        PersonSearchAgent is safe to build once here, same as
+        RiskManagementAgent/CastingDirectorAgent build their own search
+        sub-agents once -- its system prompt is fixed.
 
         clickhouse_handler, if given, is assumed to already be open (or
         about to be opened externally before ainvoke() runs) and is reused
         for the lifetime of this agent -- see class docstring. If omitted,
         ainvoke() falls back to opening/closing its own session per call.
         """
-        self.parallel_client = parallel_client or ParallelClient()
+        self.person_search_agent = person_search_agent or PersonSearchAgent()
         self._owns_handler = clickhouse_handler is None
         self._handler: Optional[ClickHouseHandler] = clickhouse_handler
 
@@ -116,13 +118,13 @@ class EnrichmentAgent:
 
     async def enrich(self, candidate: CastingCandidate) -> EnrichmentAssessment:
         """
-        Looks up (or researches + stores) a full PersonDossier for a named
-        candidate actor via the shared ClickHouseHandler session.
+        Looks up (or shallow-searches + stores) a full PersonDossier for a
+        named candidate actor via the shared ClickHouseHandler session.
         """
         assert self._handler is not None, "enrich() called outside an active ainvoke() -- no open ClickHouseHandler session"
 
         dossier, was_cache_hit = await self._handler.find_or_research_dossier(
-            self.parallel_client,
+            self.person_search_agent.research,
             candidate.name,
             additional_context=candidate.fit_rationale,
         )
@@ -130,7 +132,7 @@ class EnrichmentAgent:
         if dossier is None:
             return EnrichmentAssessment(name=candidate.name, dossier=None, source=EnrichmentSource.FAILED)
 
-        source = EnrichmentSource.CACHE if was_cache_hit else EnrichmentSource.RESEARCH
+        source = EnrichmentSource.CACHE if was_cache_hit else EnrichmentSource.SEARCH
         return EnrichmentAssessment(name=candidate.name, dossier=dossier, source=source)
 
     async def enrich_candidate(self, state: CandidateEnrichmentState) -> dict:
