@@ -63,3 +63,25 @@ def adamic_adar(credits: list[ProductionCredit]) -> Optional[float]:
     if not scored:
         return None
     return sum(1 / math.log(size) for size in scored)
+
+
+def _known_collaborator_names(dossier: PersonDossier) -> set[str]:
+    """All names a dossier documents this person as connected to -- their own collaborators list plus every filmography entry's key_collaborators. Used only as a weak 2-hop backoff signal (see shared_collaborator_count), never treated as observed shared history itself."""
+    names = {normalize_name(c.name) for c in dossier.collaborators}
+    names.update(normalize_name(n) for item in dossier.filmography for n in item.key_collaborators)
+    return names
+
+
+def shared_collaborator_count(a: Optional[PersonDossier], b: Optional[PersonDossier]) -> int:
+    """
+    Count of people both dossiers separately name as a collaborator/co-star
+    -- a "friends of friends" backoff signal for pairs with no direct shared
+    credit (see shared_production_credits). Used only to break ties among
+    otherwise-indistinguishable zero-evidence candidates in
+    ChemistryEngine.preview_swaps -- deliberately never folded into
+    shared_production_credits/ChemistryEdge itself, since it isn't observed
+    history.
+    """
+    if not a or not b:
+        return 0
+    return len(_known_collaborator_names(a) & _known_collaborator_names(b))

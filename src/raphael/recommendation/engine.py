@@ -1,7 +1,9 @@
 # Import custom modules
 from src.raphael.chemistry.models import CastingCluster, ChemistryReport
+from src.raphael.agentry.casting_director.models import CastingReport
 from src.raphael.agentry.risk_management.models import RiskAssessment, RiskLevel, RiskReport
 from src.raphael.recommendation.models import ClusterRecommendation, RecommendationReport
+from src.raphael.roster.models import Roster
 
 
 class RecommendationEngine:
@@ -17,8 +19,15 @@ class RecommendationEngine:
     # Walk order for the severity-band floor in _top_risks.
     _BAND_ORDER = (RiskLevel.HIGH, RiskLevel.MEDIUM, RiskLevel.LOW)
 
-    def invoke(self, chemistry_report: ChemistryReport, risk_report: RiskReport) -> RecommendationReport:
-        """Builds a RecommendationReport from a ChemistryReport and the RiskReport covering its candidates."""
+    def invoke(self, chemistry_report: ChemistryReport, risk_report: RiskReport, casting_report: CastingReport) -> RecommendationReport:
+        """
+        Builds a RecommendationReport from a ChemistryReport and the
+        RiskReport covering its candidates. `casting_report` is the same
+        (dossier-enriched) report ChemistryEngine built its graph from --
+        every character's full candidate shortlist, not just the actors each
+        cluster happened to pick -- carried through as `roster` so a swap
+        can be scored later without re-running the pipeline.
+        """
         assessments_by_name = {assessment.name: assessment for assessment in risk_report.assessments}
 
         return RecommendationReport(
@@ -30,7 +39,22 @@ class RecommendationEngine:
                 )
                 for cluster in chemistry_report.clusters
             ],
+            roster=Roster(
+                title=casting_report.title,
+                casting_report=casting_report,
+                risk_assessments=risk_report.assessments,
+            ),
         )
+
+    def build_single(self, cluster: CastingCluster, risk_assessments: list[RiskAssessment]) -> ClusterRecommendation:
+        """
+        Wraps a single already-scored CastingCluster (e.g. from
+        ChemistryEngine.score_selection) into a ClusterRecommendation, same
+        shape as one entry of invoke()'s output -- used by the /swap
+        endpoint so a swap's response mirrors /recommend's.
+        """
+        assessments_by_name = {assessment.name: assessment for assessment in risk_assessments}
+        return ClusterRecommendation(cluster=cluster, top_risks=self._top_risks(cluster, assessments_by_name))
 
     def _top_risks(self, cluster: CastingCluster, assessments_by_name: dict[str, RiskAssessment]) -> list[RiskAssessment]:
         """

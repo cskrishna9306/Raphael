@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 # Import custom modules
 from src.raphael.agentry.casting_director.models import CastingCandidate
 from src.raphael.agentry.screenplay_breakdown.models import CharacterProfile
+from src.raphael.agentry.risk_management.models import RiskLevel
 
 
 class ProductionCredit(BaseModel):
@@ -23,10 +24,16 @@ class ProductionCredit(BaseModel):
 
 class ChemistryNode(BaseModel):
     """
-    A single actor as a node in the collaboration graph.
+    A single actor as a node in the collaboration graph. Carries the two
+    per-actor (not pairwise) signals that also factor into chemistry_score
+    now -- role fit and risk -- alongside the graph-native total_credits, so
+    a node is a complete record of everything about this actor the scoring
+    objective considers outside of pairwise edges.
     """
     name: str = Field(description="The actor's full name; used as the node's identity/key.")
     total_credits: Optional[int] = Field(default=None, description="The actor's total known filmography size -- the marginal count NPMI normalizes co-occurrence against. Not the same as len(shared_credits) on any one edge.")
+    role_fit: Optional[float] = Field(default=None, description="CastingCandidate.fit_score for this actor in this specific role -- how well their real-world type/persona matches the character, 0-1. None if never judged (e.g. a director-specified preferred_actor).")
+    risk_level: Optional[RiskLevel] = Field(default=None, description="This actor's RiskAssessment.risk_level, if a RiskReport was supplied to build_graph. None if risk wasn't assessed (or not supplied) for this actor.")
 
 
 class AffinityMethod(Enum):
@@ -38,6 +45,11 @@ class AffinityMethod(Enum):
     KATZ = "katz"
     SIMRANK = "simrank"
     NODE2VEC = "node2vec"
+    # Common-neighbors count over each dossier's own documented collaborators/key_collaborators
+    # -- "do X and Y separately name someone in common, even though they've never worked
+    # together" -- the one of these four actually wired up (see ChemistryEngine.build_graph);
+    # the other three remain unimplemented placeholders for a future, richer backoff.
+    SHARED_COLLABORATORS = "shared_collaborators"
 
 
 class ChemistryEdge(BaseModel):
@@ -122,3 +134,44 @@ class ChemistryReport(BaseModel):
     # Expected to hold up to 5 entries; fewer is valid if the search space can't produce 5
     # distinct full-cast combinations (e.g. very small casts) -- not validator-enforced.
     clusters: list[CastingCluster] = Field(default_factory=list, description="Top clusters, ranked descending by chemistry_score.")
+
+
+class CoStarDelta(BaseModel):
+    """Change in one specific pair's chemistry if a swap were made -- the 'why' behind a SwapPreview's total delta."""
+    name: str = Field(description="The other currently-cast actor this delta is relative to.")
+    delta: float = Field(description="Change in this pair's edge weight if the swap were made -- positive means more chemistry with this co-star, negative means less.")
+
+
+class SwapPreview(BaseModel):
+    """
+    One alternate candidate's projected impact if swapped in for a
+    character, without committing to it -- lets the frontend show a clear
+    +/- and a per-co-star reason before the user picks. Candidates here
+    already passed casting_director's role-fit search (see
+    CastingDirectorAgent.find_candidates); this is the chemistry half of
+    "based on both role fit and group chemistry."
+    """
+    candidate: CastingCandidate = Field(description="The alternate candidate this preview is for.")
+    delta: float = Field(description="This cluster's chemistry_score if this candidate were swapped in, minus its current chemistry_score. Includes a tiny 2-hop backoff nudge only when estimated=True (see `estimated`); the committed /swap score never includes it.")
+    per_costar: list[CoStarDelta] = Field(
+        default_factory=list,
+        description="Pairwise chemistry change against each other currently-cast actor with real shared history before or after the swap -- omits actors with no edge either way, so this only ever shows an actual reason.",
+    )
+    estimated: bool = Field(
+        default=False,
+        description=(
+            "True when this candidate has zero direct shared-credit evidence with anyone currently "
+            "cast (per_costar is empty) -- delta is then a rough 2-hop 'shared collaborators' estimate "
+            "used only to break ties, not real evidence, and should be labeled differently in the UI. "
+            "The actual committed /swap score for this candidate would not include this nudge."
+        ),
+    )
+    used_in_other_cluster: bool = Field(
+        default=False,
+        description=(
+            "True when this alternate is already a lead in one of this report's other clusters. "
+            "A soft warning, not a filter -- picking them anyway is allowed; it just means the "
+            "cross-cluster 'no actor leads more than one cluster' property (see "
+            "ChemistryEngine._diverse_top) would no longer hold after this swap."
+        ),
+    )
