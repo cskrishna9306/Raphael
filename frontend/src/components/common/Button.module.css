@@ -1,5 +1,6 @@
 .button {
   border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 13px 20px;
   font-size: 13px;
   letter-spacing: 0.06em;

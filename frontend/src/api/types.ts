@@ -17,6 +17,8 @@ export interface CharacterProfile {
   age_range?: string | null
   description?: string | null
   traits?: string[] | null
+  /** Director-supplied casting choice for this role -- set before /recommend to cast this actor directly, skipping candidate search. */
+  preferred_actor?: string | null
 }
 
 export interface Cast {

@@ -19,4 +19,9 @@
 
   --shadow-panel: 8px 8px 0 rgba(0, 0, 0, 0.55);
   --shadow-popover: 5px 5px 0 rgba(0, 0, 0, 0.55);
+
+  /* Curved-corner scale -- sm for controls/tags, md for cards/rows, lg for top-level panels */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
 }

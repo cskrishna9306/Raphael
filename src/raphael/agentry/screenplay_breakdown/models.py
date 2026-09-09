@@ -41,6 +41,13 @@ class CharacterProfile(BaseModel):
     description: Optional[str] = Field(default=None, description="A short description of the part played by the character in this production.")
     traits: Optional[list[str]] = Field(default=None, description="A list of short 1-3 word personality, physical, and mental traits of this character.")
 
+    # Not extracted from the screenplay, set by the user before /recommend
+    preferred_actor: Optional[str] = Field(
+        default=None,
+        # NOTE: When supplied we have casting_director ignore a search for this character
+        description=("A specific real actor the director wants cast in this role, supplied before /recommend."),
+    )
+
 
 class Cast(BaseModel):
     """

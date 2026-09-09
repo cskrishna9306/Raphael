@@ -1,5 +1,6 @@
 .dropzone {
   border: 3px dashed var(--color-border-soft);
+  border-radius: var(--radius-lg);
   background: var(--color-panel-alt);
   display: flex;
   flex-direction: column;
@@ -19,8 +20,10 @@
   width: 64px;
   height: 80px;
   border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   background: var(--color-panel-inset);
   position: relative;
+  overflow: hidden;
 }
 
 .pageIcon::before {
@@ -54,6 +57,7 @@
 
 .browseButton {
   border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 8px 20px;
   font-size: 12px;
   background: var(--color-panel-inset);

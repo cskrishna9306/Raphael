@@ -6,6 +6,7 @@
 
 .headline {
   border: 2px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
   background: var(--color-panel-inset);
   padding: 14px 16px;
   display: flex;
@@ -20,6 +21,7 @@
 
 .row {
   border: 2px solid var(--color-border-dashed);
+  border-radius: var(--radius-md);
   background: var(--color-panel-inset);
   padding: 11px 14px;
   display: flex;

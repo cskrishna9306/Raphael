@@ -1,20 +1,28 @@
 .row {
   border: 2px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
   background: var(--color-panel-inset);
   padding: 11px 14px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .rowLead {
   border-color: var(--color-border);
 }
 
+.mainLine {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .roleSelect {
   font-size: 10px;
   letter-spacing: 0.04em;
   border: 2px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
   background: var(--color-panel);
   color: var(--color-text-muted);
   padding: 2px 6px;
@@ -43,4 +51,44 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 40%;
+}
+
+.actorToggle {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+  max-width: 100%;
+}
+
+.actorChosen {
+  font-size: 11px;
+  color: var(--color-accent);
+}
+
+.actorPlaceholder {
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.actorToggle:hover .actorPlaceholder {
+  color: var(--color-text-muted);
+}
+
+.actorInput {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.actorInput::placeholder {
+  color: var(--color-text-faint);
 }
