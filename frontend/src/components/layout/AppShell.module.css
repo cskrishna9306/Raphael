@@ -14,3 +14,26 @@
   margin: 0 auto;
   padding: 40px 24px 80px;
 }
+
+.workspace {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* minmax(0, 1fr) above and this min-width together stop the page's own grids
+   (the roster's tree/summary split) from forcing the column wider than the
+   track and spilling the layout sideways. */
+.content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}

@@ -10,7 +10,7 @@
 .card {
   width: 100%;
   max-width: 460px;
-  border: 2px solid var(--color-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-lg);
   background: var(--color-panel);
   box-shadow: var(--shadow-panel);
@@ -25,7 +25,7 @@
   align-items: center;
   gap: 12px;
   padding-bottom: 20px;
-  border-bottom: 2px dashed var(--color-border-dashed);
+  border-bottom: 1px dashed var(--color-border-dashed);
 }
 
 .logo {
@@ -34,12 +34,14 @@
 }
 
 .name {
+  font-family: var(--font-display);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 
 .headline {
+  font-family: var(--font-display);
   font-style: italic;
   font-size: 24px;
   line-height: 1.3;
@@ -80,7 +82,7 @@
   line-height: 1.7;
   color: var(--color-text-faint);
   padding-top: 14px;
-  border-top: 2px dashed var(--color-border-dashed);
+  border-top: 1px dashed var(--color-border-dashed);
 }
 
 @media (max-width: 480px) {

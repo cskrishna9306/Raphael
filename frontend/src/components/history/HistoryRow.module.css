@@ -1,0 +1,153 @@
+.row {
+  position: relative;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-panel-inset);
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.row:hover {
+  border-color: var(--color-border);
+}
+
+.rowActive {
+  border-color: var(--color-accent);
+}
+
+.rowOpening {
+  opacity: 0.55;
+}
+
+.open {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  /* Right padding leaves room for the absolutely-positioned delete control. */
+  padding: 11px 34px 11px 12px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.open:disabled {
+  cursor: not-allowed;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.35;
+
+  /* Titles come straight from the screenplay and can be long -- clamp to two
+     lines so one entry can't push the rest of the list out of view. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-text-faint);
+}
+
+.timestamp::before {
+  content: "·";
+  margin-right: 6px;
+}
+
+.badgeReady,
+.badgePending {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-soft);
+  font-family: var(--font-mono);
+}
+
+.badgeReady {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.badgePending {
+  color: var(--color-text-faint);
+}
+
+.delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-faint);
+  cursor: pointer;
+  /* Dimmed rather than hidden: a hover-only control is unreachable on touch,
+     where there is no hover state to reveal it. */
+  opacity: 0.4;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.row:hover .delete,
+.delete:focus-visible {
+  opacity: 1;
+}
+
+.delete:hover {
+  color: var(--color-risk-high);
+}
+
+.delete:disabled {
+  cursor: not-allowed;
+}
+
+.confirm {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 11px;
+}
+
+.confirmDelete,
+.confirmCancel {
+  flex: 1;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: 11px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.confirmDelete {
+  color: var(--color-risk-high);
+  border-color: var(--color-risk-high);
+}
+
+.confirmDelete:hover,
+.confirmCancel:hover {
+  opacity: 0.8;
+}
