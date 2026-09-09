@@ -10,6 +10,7 @@ import { FileDropzone, isAcceptedFile } from "../components/ingest/FileDropzone"
 import { FileCard } from "../components/ingest/FileCard"
 import { CharacterList } from "../components/ingest/CharacterList"
 import { BreakdownSkeleton } from "../components/ingest/BreakdownSkeleton"
+import { CastingAnalysisLoader } from "../components/ingest/CastingAnalysisLoader"
 import { cacheIngestFile, clearCachedIngestFile, loadCachedIngestFile } from "../utils/ingestFileCache"
 import styles from "./IngestPage.module.css"
 
@@ -181,13 +182,17 @@ export function IngestPage() {
                     onPreferredActorChange={handlePreferredActorChange}
                     disabled={isBusy}
                   />
-                  <Button
-                    variant="primary"
-                    disabled={isBusy || screenplay.cast.characters.length === 0}
-                    onClick={handleRunCastingAnalysis}
-                  >
-                    {stage === "recommending" ? "RUNNING CASTING ANALYSIS…" : "RUN CASTING ANALYSIS →"}
-                  </Button>
+                  {stage === "recommending" ? (
+                    <CastingAnalysisLoader />
+                  ) : (
+                    <Button
+                      variant="primary"
+                      disabled={isBusy || screenplay.cast.characters.length === 0}
+                      onClick={handleRunCastingAnalysis}
+                    >
+                      RUN CASTING ANALYSIS →
+                    </Button>
+                  )}
                 </>
               )}
             </div>

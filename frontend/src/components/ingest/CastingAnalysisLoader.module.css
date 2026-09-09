@@ -1,0 +1,64 @@
+.loader {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-panel-inset);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-track);
+  overflow: hidden;
+}
+
+.sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: var(--color-accent);
+  animation: barsweep 1.6s ease-in-out infinite;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+
+.pulseDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  flex: none;
+  animation: glowpulse 1.4s ease-in-out infinite;
+}
+
+@keyframes barsweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes glowpulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
