@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { CastingSelection, RiskAssessment } from "../../api/types"
-import { AvatarPlaceholder } from "../common/AvatarPlaceholder"
+import { Avatar } from "../common/Avatar"
 import { RiskBadge } from "../common/RiskBadge"
 import styles from "./ActorCard.module.css"
 
@@ -34,7 +34,7 @@ export function ActorCard({ selection, risk, emphasize, size = "md" }: ActorCard
       onMouseLeave={() => setShowRationale(false)}
     >
       <div className={styles.body}>
-        <AvatarPlaceholder width={avatar.width} height={avatar.height} />
+        <Avatar src={candidate.headshot_url} alt={candidate.name} width={avatar.width} height={avatar.height} />
         <div className={styles.info}>
           <div className={styles.characterLine}>
             {character.name} · {character.role_presence}
