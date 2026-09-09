@@ -15,8 +15,8 @@ tasks:
   run:
     desc: Launch the frontend and backend together
     deps:
-      - frontend
-      - backend
+      - launch-ui
+      - launch-server
 
   lint:
     desc: Lint the frontend (oxlint)
