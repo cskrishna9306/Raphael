@@ -60,6 +60,21 @@
   margin-top: 8px;
 }
 
+.skip {
+  align-self: center;
+  font-size: 12px;
+  color: var(--color-text-faint);
+  text-decoration: none;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.skip:hover {
+  color: var(--color-text-muted);
+}
+
 .footnote {
   font-size: 11px;
   line-height: 1.7;
