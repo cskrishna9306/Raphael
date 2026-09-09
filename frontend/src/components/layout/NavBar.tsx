@@ -45,7 +45,12 @@ export function NavBar() {
               Sign out
             </button>
           </div>
-        ) : null}
+        ) : (
+          // Signing in is optional -- this is just a way to reach it voluntarily, not a gate.
+          <NavLink to="/login" className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}>
+            Sign in
+          </NavLink>
+        )}
       </nav>
     </header>
   )
