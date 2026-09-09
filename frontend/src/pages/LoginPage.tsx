@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom"
+import { Navigate, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../state/AuthContext"
 import { Button } from "../components/common/Button"
 import { ErrorBanner } from "../components/common/ErrorBanner"
@@ -6,17 +6,23 @@ import { GoogleMark } from "../components/auth/GoogleMark"
 import styles from "./LoginPage.module.css"
 
 export function LoginPage() {
-  const { user, initializing, error, signIn } = useAuth()
+  const { user, initializing, error, signIn, skipSignIn } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+  const from = (location.state as { from?: string } | null)?.from
 
   if (initializing) return <div className={styles.page} aria-busy="true" />
 
-  // Send an already-signed-in user back to whichever page bounced them here,
-  // defaulting to ingest rather than "/" -- someone who came via the sign-in
-  // tab wants the app, not the About page they just left.
+  // Send an already-signed-in user back to whichever page brought them here,
+  // defaulting to ingest rather than "/" -- someone who just signed in wants
+  // the app, not the About page they came from.
   if (user) {
-    const from = (location.state as { from?: string } | null)?.from
     return <Navigate to={from ?? "/ingest"} replace />
+  }
+
+  function handleSkip() {
+    skipSignIn()
+    navigate(from ?? "/", { replace: true })
   }
 
   return (
@@ -30,7 +36,7 @@ export function LoginPage() {
         </div>
 
         <div className={styles.headline}>An agentic casting director that reads the script before it names a name.</div>
-        <div className={styles.subhead}>Sign in with Google to upload a screenplay and run a casting breakdown.</div>
+        <div className={styles.subhead}>Signing in is optional -- Raphael works the same either way, this just attaches your name to the session.</div>
 
         {error ? <ErrorBanner message={error} /> : null}
 
@@ -38,6 +44,10 @@ export function LoginPage() {
           <GoogleMark />
           Continue with Google
         </Button>
+
+        <button type="button" className={styles.skip} onClick={handleSkip}>
+          Continue without signing in →
+        </button>
 
         <div className={styles.footnote}>
           Raphael only reads your name, email and profile photo. Recommendations are decision support, not a shortlist

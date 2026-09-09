@@ -108,3 +108,9 @@
     max-height: 320px;
   }
 }
+
+.signInLink {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
