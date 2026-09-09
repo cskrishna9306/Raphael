@@ -57,6 +57,11 @@
 
 .step:first-child {
   border-left-width: 2px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.step:last-child {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
 .stepNumber {
@@ -107,6 +112,7 @@
 
 .contributor {
   border: 2px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
   background: var(--color-panel-alt);
   padding: 18px;
   display: flex;
@@ -118,6 +124,7 @@
   width: 46px;
   height: 46px;
   border: 2px solid var(--color-border);
+  border-radius: 999px;
   background: var(--color-panel-inset);
   flex: none;
   display: flex;
@@ -161,6 +168,15 @@
 
   .step {
     border-left-width: 2px;
+    border-radius: 0;
+  }
+
+  .step:first-child {
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+  }
+
+  .step:last-child {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
   }
 
   .column:first-child {

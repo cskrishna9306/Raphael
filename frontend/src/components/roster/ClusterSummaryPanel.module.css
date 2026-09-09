@@ -17,6 +17,7 @@
 
 .scoreCard {
   border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: var(--color-panel-inset);
   padding: 14px;
 }

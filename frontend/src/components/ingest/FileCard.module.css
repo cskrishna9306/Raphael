@@ -1,5 +1,6 @@
 .card {
   border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: var(--color-panel-inset);
   padding: 13px 15px;
   display: flex;
@@ -11,8 +12,10 @@
   width: 28px;
   height: 36px;
   border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   position: relative;
   flex: none;
+  overflow: hidden;
 }
 
 .icon::before {
@@ -50,6 +53,7 @@
   font-size: 11px;
   color: var(--color-text-faint);
   border: 2px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
   padding: 4px 10px;
   background: transparent;
   cursor: pointer;

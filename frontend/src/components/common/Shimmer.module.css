@@ -1,4 +1,5 @@
 .shimmer {
+  border-radius: var(--radius-sm);
   background: linear-gradient(
     90deg,
     var(--color-track) 0%,

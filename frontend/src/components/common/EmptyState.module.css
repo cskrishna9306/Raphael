@@ -1,5 +1,6 @@
 .wrapper {
   border: 3px dashed var(--color-border-dashed);
+  border-radius: var(--radius-lg);
   padding: 60px 40px;
   display: flex;
   flex-direction: column;

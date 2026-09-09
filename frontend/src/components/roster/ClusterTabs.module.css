@@ -23,6 +23,7 @@
 
 .active,
 .inactive {
+  border-radius: 999px;
   padding: 6px 14px;
   font-size: 12px;
   cursor: pointer;
