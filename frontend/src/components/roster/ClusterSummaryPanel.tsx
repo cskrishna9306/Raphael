@@ -3,21 +3,61 @@ import { formatChemistryScore } from "../../utils/format"
 import { RiskList } from "./RiskList"
 import styles from "./ClusterSummaryPanel.module.css"
 
-export function ClusterSummaryPanel({ recommendation, rank }: { recommendation: ClusterRecommendation; rank: number }) {
+interface ClusterSummaryPanelProps {
+  recommendation: ClusterRecommendation
+  rank: number
+  /** Every cluster's score, so this one can be placed against the others. */
+  allScores: number[]
+  linkedName: string | null
+  onLinkChange: (name: string | null) => void
+}
+
+export function ClusterSummaryPanel({
+  recommendation,
+  rank,
+  allScores,
+  linkedName,
+  onLinkChange,
+}: ClusterSummaryPanelProps) {
   const { cluster, top_risks } = recommendation
 
+  // ChemistryEngine bands scores relative to the run, so there is no fixed
+  // 0-1 range to plot against. The honest scale is this run's own spread.
+  const min = Math.min(...allScores)
+  const max = Math.max(...allScores)
+  const span = max - min
+  const position = span > 0 ? (cluster.chemistry_score - min) / span : 1
+
+  const sorted = [...allScores].sort((a, b) => b - a)
+  const next = sorted.find((score) => score < cluster.chemistry_score)
+  const delta = next === undefined ? null : cluster.chemistry_score - next
+
   return (
-    <div className={styles.panel}>
-      <div className={styles.label}>Cluster {String(rank + 1).padStart(2, "0")} summary</div>
-      <div className={styles.scoreCard}>
+    <aside className={styles.panel}>
+      <div className={styles.block}>
+        <h3 className={styles.label}>Ensemble chemistry</h3>
         <div className={styles.scoreRow}>
-          <span className={styles.scoreValue}>{formatChemistryScore(cluster.chemistry_score)}</span>
-          <span className={styles.scoreCaption}>ensemble chemistry · {cluster.strength}</span>
+          <span className={`${styles.scoreValue} tabular`}>{formatChemistryScore(cluster.chemistry_score)}</span>
+          <span className={styles[cluster.strength]}>{cluster.strength}</span>
+        </div>
+
+        <div className={styles.track}>
+          <div className={styles.fill} style={{ width: `${Math.max(4, position * 100)}%` }} />
+        </div>
+        <div className={styles.ticks}>
+          <span className="tabular">{formatChemistryScore(min)}</span>
+          <span>
+            rank {rank + 1} of {allScores.length}
+            {delta !== null ? ` · +${formatChemistryScore(delta)} vs next` : ""}
+          </span>
+          <span className="tabular">{formatChemistryScore(max)}</span>
         </div>
       </div>
 
-      <div className={styles.label}>Risk register</div>
-      <RiskList risks={top_risks} />
-    </div>
+      <div className={styles.block}>
+        <h3 className={styles.label}>Risk register</h3>
+        <RiskList risks={top_risks} linkedName={linkedName} onLinkChange={onLinkChange} />
+      </div>
+    </aside>
   )
 }

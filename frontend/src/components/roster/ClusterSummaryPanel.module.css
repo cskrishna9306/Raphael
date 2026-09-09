@@ -1,48 +1,96 @@
 .panel {
-  border-left: 2px dashed var(--color-border-dashed);
-  padding: 24px 20px;
+  border-left: 1px solid var(--color-border-soft);
+  padding: var(--space-5) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-5);
   background: var(--color-panel-alt);
-  min-width: 280px;
+  min-width: 260px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .label {
+  margin: 0;
+  font-family: var(--font-ui);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-faint);
-}
-
-.scoreCard {
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-panel-inset);
-  padding: 14px;
+  color: var(--color-text-muted);
 }
 
 .scoreRow {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .scoreValue {
+  font-family: var(--font-mono);
   font-size: 34px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1;
 }
 
-.scoreCaption {
-  font-size: 11px;
+.high,
+.medium,
+.low {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+/* Chemistry strength is a quality reading, so it uses the accent rather than
+   the risk ramp -- high chemistry is good, high risk is not, and they must
+   never look the same. */
+.high {
+  color: var(--color-accent);
+}
+
+.medium {
+  color: var(--color-text-muted);
+}
+
+.low {
   color: var(--color-text-faint);
-  text-transform: capitalize;
+}
+
+.track {
+  height: 6px;
+  background: var(--color-track);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: var(--space-1);
+}
+
+.fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 999px;
+  transition: width var(--dur) var(--ease);
+}
+
+.ticks {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-faint);
 }
 
 @media (max-width: 900px) {
   .panel {
     border-left: none;
-    border-top: 2px dashed var(--color-border-dashed);
+    border-top: 1px solid var(--color-border-soft);
   }
 }

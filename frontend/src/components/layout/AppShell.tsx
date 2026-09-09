@@ -24,11 +24,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       <StatusBanner status={backendStatus} />
       <NavBar />
       <main className={styles.main}>
-        <RoadmapStages />
         {showHistory ? (
           <div className={styles.workspace}>
             <HistorySidebar />
-            <div className={styles.content}>{children}</div>
+            {/* The roadmap lives in the content column, not above the whole
+                workspace: centred across the page it reads as floating between
+                the history rail and the panel rather than heading either. */}
+            <div className={styles.content}>
+              <RoadmapStages />
+              {children}
+            </div>
           </div>
         ) : (
           children

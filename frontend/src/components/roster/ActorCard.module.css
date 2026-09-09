@@ -1,94 +1,143 @@
 .card {
-  position: relative;
-  width: 208px;
-  max-width: 100%;
+  /* Width now comes from the grid track, not a fixed px value -- fixed widths
+     were what forced the truncation. */
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-panel-inset);
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 
-.large {
-  width: 280px;
-  max-width: 100%;
+.card:hover {
+  border-color: var(--color-border);
 }
 
-.compact {
-  width: 150px;
-  max-width: 100%;
+/* Leads get a weight stripe, not a heavier border on all four sides. */
+.emphasized {
+  border-left: 3px solid var(--color-accent);
+}
+
+/* Set when the same actor is hovered in the risk register. */
+.linked {
+  border-color: var(--color-accent);
+  background: var(--color-accent-wash);
 }
 
 .body {
-  border: 2px solid var(--color-border-soft);
-  border-radius: var(--radius-md);
-  background: var(--color-panel-inset);
-  padding: 13px;
   display: flex;
-  gap: 11px;
-}
-
-.emphasized .body {
-  border: 3px solid var(--color-accent);
-}
-
-.compact .body {
-  flex-direction: column;
-  gap: 7px;
-  padding: 11px;
+  gap: var(--space-3);
+  padding: var(--space-3);
 }
 
 .info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex: 1;
+  gap: 3px;
   min-width: 0;
+  flex: 1;
 }
 
-.characterLine {
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-text-faint);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.character {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  /* Wraps rather than clipping. */
+  overflow-wrap: break-word;
 }
 
 .candidateName {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.2;
+  overflow-wrap: break-word;
 }
 
-.riskRow {
+.large .candidateName {
+  font-size: 19px;
+}
+
+.compact .body {
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.compact .candidateName {
+  font-size: 14.5px;
+}
+
+.compact .rationaleToggle {
+  padding: var(--space-1) var(--space-2);
+}
+
+.metaRow {
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: 2px;
 }
 
-.popover {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  margin-top: 8px;
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-panel-inset);
-  padding: 11px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  box-shadow: var(--shadow-popover);
-  z-index: 5;
-}
-
-.popoverLabel {
-  font-size: 9px;
-  letter-spacing: 0.14em;
+.role {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-faint);
 }
 
-.popoverBody {
-  font-size: 12px;
-  line-height: 1.5;
+.rationaleToggle {
+  /* Pushed to the bottom so the bar lines up across a grid row whose cards
+     hold different amounts of text. */
+  margin-top: auto;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-top: 1px solid var(--color-border-dashed);
+  background: transparent;
+  color: var(--color-text-faint);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  line-height: 1.45;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.rationaleToggle:hover {
   color: var(--color-text-muted);
+  background: var(--color-track);
+}
+
+/* Collapsed state shows the opening of the reasoning, so there is something to
+   read (and something that looks worth expanding) before any interaction. */
+.rationaleLead {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rationaleChevron {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.rationaleFull {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  padding: 0 var(--space-3) var(--space-3);
 }
