@@ -1,6 +1,6 @@
 import { useState, type DragEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { analyzeScreenplay, createProject, recommendCast, ApiError } from "../api/client"
+import { analyzeScreenplay, createProject, recommendCastStream, ApiError } from "../api/client"
 import type { RolePresence } from "../api/types"
 import { useAppState } from "../state/AppStateContext"
 import { useHistory } from "../state/HistoryContext"
@@ -31,6 +31,7 @@ export function IngestPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [castingProgress, setCastingProgress] = useState<{ character: string; completed: number; total: number } | null>(null)
 
   function handleFileSelected(nextFile: File) {
     setFile(nextFile)
@@ -115,8 +116,9 @@ export function IngestPage() {
     if (!screenplay) return
     setStage("recommending")
     setError(null)
+    setCastingProgress(null)
     try {
-      const result = await recommendCast(screenplay, projectId ?? undefined)
+      const result = await recommendCastStream(screenplay, setCastingProgress, projectId ?? undefined)
       setReport(result)
       // Flips this project's row to "Roster ready" and moves it to the top.
       void refreshHistory()
@@ -183,7 +185,7 @@ export function IngestPage() {
                     Breakdown complete
                   </div>
                   {stage === "recommending" ? (
-                    <CastingAnalysisLoader />
+                    <CastingAnalysisLoader progress={castingProgress} />
                   ) : (
                     <Button
                       variant="primary"

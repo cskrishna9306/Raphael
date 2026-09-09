@@ -16,14 +16,13 @@
   overflow: hidden;
 }
 
-.sweep {
+.fill {
   position: absolute;
   top: 0;
   left: 0;
-  width: 40%;
   height: 100%;
   background: var(--color-accent);
-  animation: barsweep 1.6s ease-in-out infinite;
+  transition: width 0.4s ease;
 }
 
 .statusRow {
@@ -42,15 +41,6 @@
   background: var(--color-accent);
   flex: none;
   animation: glowpulse 1.4s ease-in-out infinite;
-}
-
-@keyframes barsweep {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(320%);
-  }
 }
 
 @keyframes glowpulse {

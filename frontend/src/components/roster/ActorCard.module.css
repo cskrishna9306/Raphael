@@ -31,6 +31,15 @@
   padding: var(--space-3);
 }
 
+/* The card body doubles as the swap trigger when alternates exist. */
+.swappable {
+  cursor: pointer;
+}
+
+.card:has(.swappable:hover) {
+  border-color: var(--color-accent);
+}
+
 .info {
   display: flex;
   flex-direction: column;
@@ -140,4 +149,122 @@
   line-height: 1.55;
   color: var(--color-text-muted);
   padding: 0 var(--space-3) var(--space-3);
+}
+
+/* ---- swap picker (merged from origin/main, restyled onto the token set) ---- */
+
+.swapHint {
+  align-self: flex-start;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+}
+
+/* The one genuinely floating surface on the card, so it keeps the shadow. */
+.popover {
+  border-top: 1px solid var(--color-border-dashed);
+  background: var(--color-panel-alt);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.popoverLabel {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  line-height: 1.4;
+}
+
+.swapList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.swapOption {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  padding: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: background var(--dur) var(--ease);
+}
+
+.swapOption:hover {
+  background: var(--color-track);
+}
+
+.swapOptionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.swapOptionName {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.costarRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-faint);
+}
+
+/* A positive delta is a quality reading, so it takes the accent rather than a
+   green that would collide with the risk ramp. */
+.deltaPositive,
+.deltaNegative {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.deltaPositive {
+  color: var(--color-accent);
+}
+
+.deltaNegative {
+  color: var(--color-risk-high);
+}
+
+.swapError {
+  padding: var(--space-2);
+  font-size: 12px;
+  color: var(--color-risk-high);
+}
+
+.estimated {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.estimatedNote {
+  font-style: italic;
+  width: 100%;
 }
