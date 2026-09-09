@@ -2,12 +2,7 @@ import { NavLink } from "react-router-dom"
 import { useAppState } from "../../state/AppStateContext"
 import styles from "./NavBar.module.css"
 
-const NAV_ITEMS = [
-  { to: "/", label: "Ingest", end: true },
-  { to: "/roster", label: "Roster" },
-  { to: "/casting-sheet", label: "Casting sheet" },
-  { to: "/about", label: "About" },
-]
+const NAV_ITEMS = [{ to: "/about", label: "About" }]
 
 export function NavBar() {
   const { screenplay } = useAppState()
@@ -26,7 +21,6 @@ export function NavBar() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.end}
             className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
           >
             {item.label}

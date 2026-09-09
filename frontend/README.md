@@ -8,7 +8,6 @@ breakdown) and `POST /recommend` (casting, chemistry and risk pipeline).
 
 - **Ingest** (`/`): drop a `.txt`/`.pdf` screenplay, run the breakdown, review/edit detected characters, then run casting analysis
 - **Roster** (`/roster`): ranked cast clusters as a lead/supporting/ensemble formation tree, with chemistry score and risk register per cluster
-- **Casting sheet** (`/casting-sheet`): the same recommendation data as a flat exportable table
 - **About** (`/about`): static explainer of how Raphael reasons and its contributors
 
 ## Setup
