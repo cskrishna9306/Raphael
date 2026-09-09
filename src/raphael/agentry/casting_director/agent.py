@@ -153,7 +153,17 @@ class CastingDirectorAgent:
         dossier already prefilled from search alone.
         """
         character = state["character"]
-        candidates = await self.find_candidates(character)
+
+        # Ignores a Parallel search call if the user provides custom actors of their choice
+        if character.preferred_actor:
+            candidates = [
+                CastingCandidate(
+                    name=character.preferred_actor,
+                    fit_rationale="User-specified casting choice.",
+                )
+            ]
+        else:
+            candidates = await self.find_candidates(character)
 
         # NOTE: Moved the deep research enrichment agent to exist as its own agent
         # Deep-research enrichment disabled -- see enrich_candidate above.
