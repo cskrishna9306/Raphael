@@ -1,10 +1,13 @@
 # Import standard packages
+import traceback
 from contextlib import asynccontextmanager
 
 # Import third-party packages
-from fastapi import Depends, FastAPI, File, HTTPException, Response, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # Import custom modules
 from src.raphael.agentry.orchestrator import Raphael
@@ -33,6 +36,21 @@ async def lifespan(_app: FastAPI):
 
 # Instantiate a single FastAPI server
 app = FastAPI(title="Raphael", lifespan=lifespan)
+
+async def unhandled_error_to_json(request: Request, call_next):
+    """
+    Turns an unhandled exception into a JSON 500 instead of letting it reach
+    Starlette's own error handler.
+    """
+    try:
+        return await call_next(request)
+    except Exception:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"detail": "Internal server error. Check the server logs."})
+
+# Added before CORSMiddleware so it ends up INSIDE it: add_middleware pushes
+# each new layer to the outside, so the last one added wraps everything above.
+app.add_middleware(BaseHTTPMiddleware, dispatch=unhandled_error_to_json)
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,25 +106,32 @@ async def recommend(
     # Checked before the pipeline runs, not after: a bad project_id is a
     # caller mistake, and it costs minutes of casting/enrichment work to find
     # out about it on the way back out.
-    if project_id is not None:
+    save_to_project = project_id
+    if save_to_project is not None:
         try:
             # HistoryStore is sync (see its class comment); this endpoint has
             # to stay async for the pipeline, so its two Firestore calls go
             # through the same threadpool the sync routes below get for free.
-            await run_in_threadpool(history.ensure_project_exists, claims["uid"], project_id)
+            await run_in_threadpool(history.ensure_project_exists, claims["uid"], save_to_project)
         except ProjectNotFoundError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No such project.")
+        except Exception as e:
+            # A bad id is the caller's problem (404 above), but history being
+            # unreachable is not -- run the pipeline anyway and skip the save,
+            # rather than refusing to cast at all because storage is down.
+            print(f"[history] History unavailable, running without saving: {e}")
+            save_to_project = None
 
     report = await raphael.recommend(screenplay)
 
-    if project_id is not None:
+    if save_to_project is not None:
         # Deliberately non-fatal. The report in hand cost a full pipeline run;
         # handing it back unsaved beats failing the request and discarding it
         # over a storage problem the caller can't do anything about.
         try:
-            await run_in_threadpool(history.save_report, claims["uid"], project_id, report)
+            await run_in_threadpool(history.save_report, claims["uid"], save_to_project, report, screenplay)
         except Exception as e:
-            print(f"[history] Could not save report for project {project_id}: {e}")
+            print(f"[history] Could not save report for project {save_to_project}: {e}")
 
     return report
 

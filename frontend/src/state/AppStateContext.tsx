@@ -4,34 +4,51 @@ import type { RecommendationReport, Screenplay } from "../api/types"
 interface AppState {
   screenplay: Screenplay | null
   report: RecommendationReport | null
+  /** Id of the saved project these two belong to, or null for work not saved to history yet. */
+  projectId: string | null
+  /**
+   * Bumped by every reset(). The ingest route uses it as a React key, so
+   * starting over also clears that page's own local state (the dropped file,
+   * the stage) rather than leaving it pointing at the previous screenplay.
+   */
+  sessionKey: number
   setScreenplay: (screenplay: Screenplay | null) => void
   setReport: (report: RecommendationReport | null) => void
+  setProjectId: (projectId: string | null) => void
   reset: () => void
 }
 
 const AppStateContext = createContext<AppState | null>(null)
 
 /**
- * Holds the two pieces of state produced by the pipeline (the Screenplay
- * from /analyze, the RecommendationReport from /recommend) so the Roster page
- * can read them without re-fetching or prop-drilling through the router.
+ * Holds the pipeline's state (the Screenplay from /analyze, the
+ * RecommendationReport from /recommend, and the history project they belong
+ * to) so the Roster page and the history sidebar can read them without
+ * re-fetching or prop-drilling through the router.
  */
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [screenplay, setScreenplay] = useState<Screenplay | null>(null)
   const [report, setReport] = useState<RecommendationReport | null>(null)
+  const [projectId, setProjectId] = useState<string | null>(null)
+  const [sessionKey, setSessionKey] = useState(0)
 
   const value = useMemo<AppState>(
     () => ({
       screenplay,
       report,
+      projectId,
+      sessionKey,
       setScreenplay,
       setReport,
+      setProjectId,
       reset: () => {
         setScreenplay(null)
         setReport(null)
+        setProjectId(null)
+        setSessionKey((current) => current + 1)
       },
     }),
-    [screenplay, report],
+    [screenplay, report, projectId, sessionKey],
   )
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

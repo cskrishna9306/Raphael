@@ -19,7 +19,7 @@ export function RosterPage() {
     return (
       <EmptyState title="No roster yet">
         <p>Run a screenplay through the ingest flow to get ranked cast clusters here.</p>
-        <Link to="/">
+        <Link to="/ingest">
           <Button variant="primary">Go to Ingest →</Button>
         </Link>
       </EmptyState>
