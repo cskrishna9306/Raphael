@@ -1,6 +1,7 @@
 # Import standard packages
 import asyncio
 from pathlib import Path
+from typing import AsyncIterator
 
 # Import LangGraph packages
 from langgraph.graph import StateGraph, START, END
@@ -109,24 +110,37 @@ class CastingDirectorAgent:
         dossier prefilled from whatever the search findings happen to
         surface (no deep research call -- see enrich_candidate).
 
-        A character with zero candidates sinks the entire report downstream
-        (see ChemistryEngine.search_clusters), so an empty first pass gets
-        one retry with a broadened query before it's accepted -- this is for
-        named/principal characters only (BACKGROUND/EXTRA never reach here,
-        see fan_out) where an empty result is more likely search flakiness
-        than a genuine "no real actor fits this" case.
+        A character with too few candidates sinks both the chemistry search
+        (see ChemistryEngine.search_clusters) and the frontend's swap picker,
+        which needs real alternatives to offer for every role -- so a first
+        pass short of the target gets one retry with a broadened query before
+        it's accepted, the same way a fully empty pass always did. LEAD roles
+        target a bigger pool than supporting/minor ones: with only ~3
+        candidates to choose from, every cluster and every swap picker ends
+        up offering the same handful of names regardless of how the search
+        or cluster diversity logic works downstream -- real variety has to
+        start with a real pool. This is for named/principal characters only
+        (BACKGROUND/EXTRA never reach here, see fan_out), where a thin result
+        is more likely search under-reaching than a genuine "only one real
+        actor fits this" case.
         """
+        target = config.CASTING_DIRECTOR_MIN_CANDIDATES_LEAD if character.role_presence == RolePresence.LEAD else config.CASTING_DIRECTOR_MIN_CANDIDATES
         candidates = await self.search_and_structure(character_query(character), character.name)
 
-        if not candidates:
+        if len(candidates) < target:
             broadened_query = character_query(character) + (
-                "\n\nYour first search found no solid candidates for this description. "
-                "Broaden your search and name the best real, working actor who plausibly "
-                "fits the character's role size, gender, and general type, even if the "
-                "match isn't exact -- only decline again if truly no real actor search "
-                "result supports even a loose fit."
+                "\n\nYour first search found too few solid candidates for this description "
+                f"(need at least {target}, this role needs real, distinct alternatives to "
+                "choose between). Broaden your search and name more real, working actors who "
+                "plausibly fit the character's role size, gender, and general type, even if "
+                "the match isn't exact -- only report fewer than that if truly no other real "
+                "actor search result supports even a loose fit."
             )
-            candidates = await self.search_and_structure(broadened_query, character.name)
+            broadened = await self.search_and_structure(broadened_query, character.name)
+            # Broadened pass adds to, rather than replaces, the first pass's finds --
+            # a broader query shouldn't cost us candidates the tighter one already found.
+            seen = {candidate.name for candidate in candidates}
+            candidates = candidates + [c for c in broadened if c.name not in seen]
 
         return candidates
 
@@ -134,17 +148,28 @@ class CastingDirectorAgent:
         """
         Runs one search + structuring pass for a character and returns
         whatever candidates it extracts (possibly none).
+
+        `query` is the same character_query(character) text used for the web
+        search above, so it already carries the character's role size,
+        gender, age range, description, and traits -- passed through to the
+        structuring step too so fit_score has an actual character to judge
+        the actor's real-world type/persona against, not just the actor's
+        own search findings in isolation.
         """
         findings = await self.search_agent.ainvoke(query)
 
         result: CandidateSearchResult = await structuring_model(CandidateSearchResult, config.CASTING_DIRECTOR_MODEL_ID).ainvoke(
             f"Extract the candidate actors from these casting search findings "
             f"for the character {character_name}: their name, a fit rationale, "
-            f"and a dossier prefilled with whatever casting-relevant facts "
-            f"(bio, notable roles, age/nationality/build, etc.) the findings "
-            f"happen to mention. Leave dossier fields unset rather than "
-            f"guessing if the findings don't support them -- this is a "
-            f"best-effort prefill from search, not deep research.\n\n{findings}"
+            f"a fit_score (0-1) for how well their real-world type/persona -- not "
+            f"just their age/gender fit, but their general public persona, the "
+            f"kinds of characters they're known for playing, range -- matches this "
+            f"specific character's traits and description below, and a dossier "
+            f"prefilled with whatever casting-relevant facts (bio, notable roles, "
+            f"age/nationality/build, etc.) the findings happen to mention. Leave "
+            f"dossier fields unset rather than guessing if the findings don't "
+            f"support them -- this is a best-effort prefill from search, not deep "
+            f"research.\n\nCharacter description:\n{query}\n\nSearch findings:\n{findings}"
         )
 
         return result.candidates
@@ -213,3 +238,29 @@ class CastingDirectorAgent:
         """
         result = await self.graph.ainvoke({"screenplay": screenplay, "castings": []})
         return result["report"]
+
+    async def astream_progress(self, screenplay: Screenplay) -> AsyncIterator[dict]:
+        """
+        Streams one event per character as their candidate search finishes,
+        then a final event carrying the full CastingReport -- fan_out
+        dispatches one independent search_candidates branch per character,
+        and LangGraph's "updates" stream mode surfaces each branch's
+        completion as soon as it finishes rather than waiting for the whole
+        fan-out (confirmed live: completions arrive spread out over the full
+        run, not bunched at the end), so this gives the frontend real
+        per-character progress instead of a fake timed loader.
+        """
+        total = len(self.fan_out({"screenplay": screenplay, "castings": []}))
+        completed = 0
+        castings: list[CastingCharacter] = []
+
+        async for update in self.graph.astream({"screenplay": screenplay, "castings": []}, stream_mode="updates"):
+            node_output = update.get("search_candidates")
+            if node_output is None:
+                continue
+            for casting in node_output["castings"]:
+                completed += 1
+                castings.append(casting)
+                yield {"type": "casting_progress", "character": casting.character.name, "completed": completed, "total": total}
+
+        yield {"type": "casting_complete", "report": CastingReport(title=screenplay.title, castings=castings)}

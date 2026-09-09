@@ -1,6 +1,6 @@
 import { useState, type DragEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { analyzeScreenplay, recommendCast, ApiError } from "../api/client"
+import { analyzeScreenplay, recommendCastStream, ApiError } from "../api/client"
 import type { RolePresence } from "../api/types"
 import { useAppState } from "../state/AppStateContext"
 import { Panel } from "../components/common/Panel"
@@ -28,6 +28,7 @@ export function IngestPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [castingProgress, setCastingProgress] = useState<{ character: string; completed: number; total: number } | null>(null)
 
   function handleFileSelected(nextFile: File) {
     setFile(nextFile)
@@ -100,8 +101,9 @@ export function IngestPage() {
     if (!screenplay) return
     setStage("recommending")
     setError(null)
+    setCastingProgress(null)
     try {
-      const result = await recommendCast(screenplay)
+      const result = await recommendCastStream(screenplay, setCastingProgress)
       setReport(result)
       navigate("/roster")
     } catch (err) {
@@ -183,7 +185,7 @@ export function IngestPage() {
                     disabled={isBusy}
                   />
                   {stage === "recommending" ? (
-                    <CastingAnalysisLoader />
+                    <CastingAnalysisLoader progress={castingProgress} />
                   ) : (
                     <Button
                       variant="primary"

@@ -1,4 +1,4 @@
-import type { CastingSelection, RiskAssessment, RolePresence } from "../api/types"
+import type { CastingCandidate, CastingSelection, RiskAssessment, RolePresence, Roster } from "../api/types"
 
 export type StoryWeightBucket = "Lead" | "Supporting" | "Ensemble"
 
@@ -29,7 +29,24 @@ export function groupSelectionsByStoryWeight(selections: CastingSelection[]): Ar
   return BUCKET_ORDER.filter((bucket) => buckets.has(bucket)).map((bucket) => [bucket, buckets.get(bucket)!])
 }
 
-/** Finds the RiskAssessment for a candidate, if RecommendationReport's top_risks included them. */
-export function riskAssessmentFor(name: string, topRisks: RiskAssessment[]): RiskAssessment | undefined {
-  return topRisks.find((risk) => risk.name === name)
+/** Finds the RiskAssessment for a candidate in any RiskAssessment list -- a cluster's top_risks or the full roster's risk_assessments. */
+export function riskAssessmentFor(name: string, risks: RiskAssessment[]): RiskAssessment | undefined {
+  return risks.find((risk) => risk.name === name)
+}
+
+export interface AlternateCandidate {
+  candidate: CastingCandidate
+  risk?: RiskAssessment
+}
+
+/**
+ * The other candidates a character could be swapped to -- everyone in that
+ * character's shortlist (Roster.casting_report) besides whoever is
+ * currently selected, each paired with their risk assessment for display.
+ */
+export function alternatesFor(characterName: string, currentCandidateName: string, roster: Roster): AlternateCandidate[] {
+  const shortlist = roster.casting_report.castings.find((casting) => casting.character.name === characterName)?.candidates ?? []
+  return shortlist
+    .filter((candidate) => candidate.name !== currentCandidateName)
+    .map((candidate) => ({ candidate, risk: riskAssessmentFor(candidate.name, roster.risk_assessments) }))
 }
