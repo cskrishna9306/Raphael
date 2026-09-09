@@ -46,10 +46,12 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
           flags: --service-account=raphael@${{ env.PROJECT_ID }}.iam.gserviceaccount.com --memory=1Gi --allow-unauthenticated
+          # env_vars entries are split on commas as well as newlines, so
+          # ALLOWED_ORIGINS (a comma-separated list) has to stay quoted.
           env_vars: |
             GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
             GOOGLE_CLOUD_LOCATION=global
-            ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
+            ALLOWED_ORIGINS="${{ vars.ALLOWED_ORIGINS }}"
             CLICKHOUSE_HOST=${{ secrets.CLICKHOUSE_HOST }}
             CLICKHOUSE_PORT=${{ secrets.CLICKHOUSE_PORT }}
             CLICKHOUSE_USERNAME=${{ secrets.CLICKHOUSE_USERNAME }}

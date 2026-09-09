@@ -1,0 +1,4 @@
+.pending {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
