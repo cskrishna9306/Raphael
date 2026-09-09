@@ -11,6 +11,7 @@ from src.raphael.tmdb.models import (
     CrewMember,
     PersonMovieCredits,
     PersonMovieCredit,
+    PersonSearchResult,
 )
 
 
@@ -93,6 +94,39 @@ class TMDBClient:
         except Exception as e:
             print(f"[TMDB] Error parsing movie credits for person {person_id}: {e}")
             return None
+
+    async def search_person(self, name: str) -> Optional[PersonSearchResult]:
+        """
+        Find the first search hit for `name`. Doesn't disambiguate between
+        multiple people sharing a name -- TMDB ranks by popularity, so this
+        takes whatever it ranks first (favors the well-known match).
+        """
+        data = await self._get("search/person", {"query": name})
+        if data is None:
+            return None
+        results = data.get("results", [])
+        if not results:
+            return None
+        return PersonSearchResult(**results[0])
+
+    def profile_image_url(self, profile_path: Optional[str]) -> Optional[str]:
+        """
+        Resolves a person's relative `profile_path` into a full, directly
+        loadable image URL. Returns None if TMDB has no profile image on file.
+        """
+        if not profile_path:
+            return None
+        return f"{config.TMDB_IMAGE_BASE_URL}{profile_path}"
+
+    async def find_headshot_url(self, name: str) -> Optional[str]:
+        """
+        Look up `name` on TMDB and return a directly loadable headshot URL,
+        or None if there's no match or TMDB has no profile image on file.
+        """
+        result = await self.search_person(name)
+        if result is None:
+            return None
+        return self.profile_image_url(result.profile_path)
 
     async def find_movie_credits(self, title: str) -> Optional[MovieCredits]:
         """

@@ -74,6 +74,7 @@ export interface CastingCandidate {
   name: string
   fit_rationale?: string | null
   dossier?: PersonDossier | null
+  headshot_url?: string | null
 }
 
 export interface CastingSelection {

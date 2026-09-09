@@ -1,0 +1,6 @@
+.image {
+  flex: none;
+  border: 2px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
