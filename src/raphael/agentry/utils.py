@@ -25,12 +25,19 @@ if TYPE_CHECKING:
 def structuring_model(schema: type[BaseModel], model_id: str = config.MODEL_ID):
     """
     Builds a plain LLM call constrained to a given structured-output schema.
+
+    temperature=0 -- this is an extraction task (turn already-fetched search
+    findings into a fixed schema), not a creative one, so the same findings
+    should structure the same way every time. Without this, the default
+    sampling temperature made casting/risk/enrichment results vary between
+    identical runs even when the underlying search findings didn't change.
     """
     return ChatGoogleGenerativeAI(
         model=model_id,
         vertexai=True,
         project=config.GOOGLE_CLOUD_PROJECT,
         location=config.GOOGLE_CLOUD_LOCATION,
+        temperature=0,
     ).with_structured_output(schema)
 
 def character_query(character: CharacterProfile) -> str:

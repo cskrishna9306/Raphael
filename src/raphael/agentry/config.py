@@ -31,6 +31,16 @@ class Config:
         # The Vertex AI model ID used by the casting_director agent
         self.CASTING_DIRECTOR_MODEL_ID: str = "gemini-3.5-flash-lite"
 
+        # Minimum candidates find_candidates tries to secure per character (even minor
+        # roles), so every character has real alternatives for the frontend's swap picker
+        self.CASTING_DIRECTOR_MIN_CANDIDATES: int = 3
+
+        # LEAD roles get a bigger target -- ChemistryEngine's cluster search and the
+        # frontend's swap picker can only ever be as diverse as the candidate pool they
+        # draw from, and leads are exactly where users want real alternatives, not just
+        # the same ~3 names in every cluster
+        self.CASTING_DIRECTOR_MIN_CANDIDATES_LEAD: int = 6
+
         # The Vertex AI model ID used by the risk_management agent
         self.RISK_MANAGEMENT_MODEL_ID: str = "gemini-3.5-flash-lite"
 

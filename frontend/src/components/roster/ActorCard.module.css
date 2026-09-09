@@ -23,6 +23,14 @@
   gap: 11px;
 }
 
+.swappable {
+  cursor: pointer;
+}
+
+.swappable:hover {
+  border-color: var(--color-accent);
+}
+
 .emphasized .body {
   border: 3px solid var(--color-accent);
 }
@@ -91,4 +99,89 @@
   font-size: 12px;
   line-height: 1.5;
   color: var(--color-text-muted);
+}
+
+.swapHint {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.swapList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.swapOption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  background: none;
+  padding: 6px 8px;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.swapOption:hover {
+  background: var(--color-panel-alt);
+}
+
+.swapOptionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.swapOptionName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.costarRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 10px;
+  color: var(--color-text-faint);
+}
+
+.deltaPositive {
+  font-weight: 600;
+  color: #7fae7f;
+  flex: none;
+}
+
+.deltaNegative {
+  font-weight: 600;
+  color: var(--color-danger);
+  flex: none;
+}
+
+.swapError {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--color-danger);
+}
+
+.estimated {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.estimatedNote {
+  font-style: italic;
+  width: 100%;
 }

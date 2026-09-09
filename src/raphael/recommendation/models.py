@@ -3,8 +3,9 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 # Import custom modules
-from src.raphael.chemistry.models import CastingCluster
+from src.raphael.chemistry.models import CastingCluster, CastingSelection, SwapPreview
 from src.raphael.agentry.risk_management.models import RiskAssessment
+from src.raphael.roster.models import Roster
 
 
 class ClusterRecommendation(BaseModel):
@@ -30,4 +31,46 @@ class RecommendationReport(BaseModel):
     recommendations: list[ClusterRecommendation] = Field(
         default_factory=list,
         description="One entry per ChemistryReport cluster, same order (rank) as ChemistryReport.clusters.",
+    )
+    roster: Roster = Field(
+        description=(
+            "The full candidate pool every recommendation was picked from -- every "
+            "character's whole shortlist (dossiers included) plus every candidate's risk "
+            "assessment. Lets the frontend offer substitutes per character; see /swap."
+        )
+    )
+
+
+class SwapRequest(BaseModel):
+    """
+    Request body for POST /swap: recompute chemistry/risk for one cluster
+    with a single character's candidate substituted, without re-running the
+    search or any agents. Deliberately stateless -- roster is round-tripped
+    from an earlier RecommendationReport rather than cached server-side.
+    """
+    roster: Roster = Field(description="The Roster from a prior RecommendationReport -- supplies every candidate's dossier/risk for graph rebuilding.")
+    selections: list[CastingSelection] = Field(description="The full cluster's selections (one candidate per character) with the swap already applied.")
+    reference_scores: list[float] = Field(description="chemistry_score of the prior RecommendationReport's recommendations, used to bucket this ad-hoc score into the same high/medium/low bands.")
+
+
+class SwapPreviewRequest(BaseModel):
+    """Request body for POST /swap/preview: score every other candidate for one character as a hypothetical swap, without committing to any of them."""
+    roster: Roster = Field(description="The Roster from a prior RecommendationReport -- supplies every candidate's dossier for graph rebuilding.")
+    selections: list[CastingSelection] = Field(description="The cluster's current selections (one candidate per character) to preview alternatives against.")
+    character_name: str = Field(description="Which character's shortlist to preview alternatives for.")
+    excluded_leads: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Lead actors already used in this report's OTHER clusters -- dropped from the "
+            "alternates offered here, but only when character_name is itself a LEAD role. "
+            "Mirrors search_clusters' 'no actor leads more than one cluster' rule so swapping "
+            "can't reintroduce a duplicate lead across clusters."
+        ),
+    )
+
+
+class SwapPreviewResponse(BaseModel):
+    previews: list[SwapPreview] = Field(
+        default_factory=list,
+        description="One entry per other candidate in the character's shortlist, ranked by delta descending -- best chemistry improvement first.",
     )
