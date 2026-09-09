@@ -1,5 +1,6 @@
 # Import standard packages
 import asyncio
+from typing import AsyncIterator
 
 # Import LangChain packages
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -11,6 +12,7 @@ from src.raphael.agentry.screenplay_breakdown.models import Screenplay
 from src.raphael.agentry.casting_director import CastingDirectorAgent
 from src.raphael.agentry.enrichment import EnrichmentAgent
 from src.raphael.agentry.risk_management import RiskManagementAgent
+from src.raphael.agentry.casting_director.models import CastingReport
 from src.raphael.chemistry.engine import ChemistryEngine
 from src.raphael.clickhouse.handler import ClickHouseHandler
 from src.raphael.recommendation.engine import RecommendationEngine
@@ -86,7 +88,28 @@ class Raphael:
         Runs the rest of the pipeline over an already-broken-down screenplay from the /analyze endpoint.
         """
         casting_report = await self.casting_director_agent.ainvoke(screenplay)
+        return await self._recommend_from_casting(casting_report)
 
+    async def astream_recommend(self, screenplay: Screenplay) -> AsyncIterator[dict]:
+        """
+        Streaming counterpart to recommend() -- re-yields
+        CastingDirectorAgent.astream_progress's real per-character progress
+        events, then runs the exact same rest-of-pipeline recommend() does
+        (see _recommend_from_casting) once casting finishes, and yields the
+        same RecommendationReport recommend() would return as a final event.
+        """
+        casting_report: CastingReport | None = None
+        async for event in self.casting_director_agent.astream_progress(screenplay):
+            if event["type"] == "casting_complete":
+                casting_report = event["report"]
+            else:
+                yield event
+
+        assert casting_report is not None, "astream_progress ended without a casting_complete event"
+        yield {"type": "recommend_complete", "report": await self._recommend_from_casting(casting_report)}
+
+    async def _recommend_from_casting(self, casting_report: CastingReport) -> RecommendationReport:
+        """Shared tail of recommend()/astream_recommend() -- everything after casting_director has a CastingReport in hand."""
         # Enrichment and risk assessment are independent hence ran concurrently!
         enrichment_report, risk_report = await asyncio.gather(
             self.enrichment_agent.ainvoke(casting_report),
@@ -98,9 +121,8 @@ class Raphael:
         # full filmography/collaborators data. The raw EnrichmentReport is fully absorbed
         # here, so it isn't returned separately.
         enriched_casting_report = enrichment_report.merge_dossiers(casting_report)
-        chemistry_report = self.chemistry_engine.invoke(enriched_casting_report)
-        recommendations = self.recommendation_engine.invoke(chemistry_report, risk_report)
-
-        return recommendations
+        risk_by_name = {assessment.name: assessment for assessment in risk_report.assessments}
+        chemistry_report = self.chemistry_engine.invoke(enriched_casting_report, risk_by_name)
+        return self.recommendation_engine.invoke(chemistry_report, risk_report, enriched_casting_report)
 
 

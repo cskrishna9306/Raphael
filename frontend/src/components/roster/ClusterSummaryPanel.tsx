@@ -3,11 +3,19 @@ import { formatChemistryScore } from "../../utils/format"
 import { RiskList } from "./RiskList"
 import styles from "./ClusterSummaryPanel.module.css"
 
+export interface SwapDelta {
+  characterName: string
+  from: number
+  to: number
+}
+
 interface ClusterSummaryPanelProps {
   recommendation: ClusterRecommendation
   rank: number
   /** Every cluster's score, so this one can be placed against the others. */
   allScores: number[]
+  /** Set after a /swap, to show what the substitution did to the score. */
+  swapDelta?: SwapDelta | null
   linkedName: string | null
   onLinkChange: (name: string | null) => void
 }
@@ -16,6 +24,7 @@ export function ClusterSummaryPanel({
   recommendation,
   rank,
   allScores,
+  swapDelta,
   linkedName,
   onLinkChange,
 }: ClusterSummaryPanelProps) {
@@ -52,6 +61,14 @@ export function ClusterSummaryPanel({
           </span>
           <span className="tabular">{formatChemistryScore(max)}</span>
         </div>
+        {swapDelta ? (
+          <div className={styles.deltaRow}>
+            After swapping {swapDelta.characterName}: {formatChemistryScore(swapDelta.from)} → {formatChemistryScore(swapDelta.to)}
+            {" "}
+            ({swapDelta.to >= swapDelta.from ? "+" : ""}
+            {formatChemistryScore(swapDelta.to - swapDelta.from)})
+          </div>
+        ) : null}
       </div>
 
       <div className={styles.block}>

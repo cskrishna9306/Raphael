@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react"
-import type { RecommendationReport, Screenplay } from "../api/types"
+import type { ClusterRecommendation, RecommendationReport, Screenplay } from "../api/types"
 
 interface AppState {
   screenplay: Screenplay | null
@@ -15,6 +15,8 @@ interface AppState {
   setScreenplay: (screenplay: Screenplay | null) => void
   setReport: (report: RecommendationReport | null) => void
   setProjectId: (projectId: string | null) => void
+  /** Overwrites one cluster slot in place (e.g. after a /swap) -- other ranked clusters are untouched. */
+  updateRecommendation: (index: number, next: ClusterRecommendation) => void
   reset: () => void
 }
 
@@ -41,6 +43,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setScreenplay,
       setReport,
       setProjectId,
+      updateRecommendation: (index, next) => {
+        setReport((current) => {
+          if (!current) return current
+          const recommendations = current.recommendations.slice()
+          recommendations[index] = next
+          return { ...current, recommendations }
+        })
+      },
       reset: () => {
         setScreenplay(null)
         setReport(null)

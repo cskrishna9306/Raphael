@@ -1,11 +1,12 @@
 # Import standard packages
+import json
 import traceback
 from contextlib import asynccontextmanager
 
 # Import third-party packages
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -17,7 +18,13 @@ from src.raphael.auth import verify_token
 from src.raphael.config import config
 from src.raphael.history.models import Project, ProjectSummary
 from src.raphael.history.store import HistoryStore, ProjectNotFoundError
-from src.raphael.recommendation.models import RecommendationReport
+from src.raphael.recommendation.models import (
+    ClusterRecommendation,
+    RecommendationReport,
+    SwapPreviewRequest,
+    SwapPreviewResponse,
+    SwapRequest,
+)
 
 raphael = Raphael()
 history = HistoryStore()
@@ -181,3 +188,95 @@ def delete_project(
     if not history.delete_project(claims["uid"], project_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No such project.")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@app.post("/recommend/stream")
+async def recommend_stream(
+    screenplay: Screenplay,
+    project_id: str | None = None,
+    claims: dict = Depends(verify_token),
+) -> StreamingResponse:
+    """
+    Streaming counterpart to /recommend: emits one SSE event per character
+    as casting_director finishes searching for them
+    (`{"type": "casting_progress", "character", "completed", "total"}`),
+    then a final event carrying the same RecommendationReport /recommend
+    returns (`{"type": "recommend_complete", "report"}`) -- lets the
+    frontend show real per-character progress instead of a fake timed
+    loader while the casting search is in flight. Requires a Firebase ID
+    token in the Authorization header, same as /recommend.
+
+    Errors surface as an in-stream `{"type": "error", "message"}` event
+    rather than an HTTP error status -- by the time a failure can happen
+    here, the 200 response has already started streaming, so there's no
+    HTTP status left to change.
+    """
+    # Checked before streaming starts: once the 200 is on the wire there is no
+    # status left to turn into a 404. Same reasoning as /recommend, which
+    # validates before paying for the pipeline.
+    save_to_project = project_id
+    if save_to_project is not None:
+        try:
+            await run_in_threadpool(history.ensure_project_exists, claims["uid"], save_to_project)
+        except ProjectNotFoundError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No such project.")
+        except Exception as e:
+            print(f"[history] History unavailable, streaming without saving: {e}")
+            save_to_project = None
+
+    async def event_source():
+        try:
+            async for event in raphael.astream_recommend(screenplay):
+                payload = dict(event)
+                if "report" in payload:
+                    report = payload["report"]
+                    payload["report"] = report.model_dump(mode="json")
+                    if save_to_project is not None:
+                        # Non-fatal, as in /recommend: the run already cost a
+                        # full pipeline pass, so a storage failure must not
+                        # stop the report reaching the caller.
+                        try:
+                            await run_in_threadpool(
+                                history.save_report, claims["uid"], save_to_project, report, screenplay
+                            )
+                        except Exception as e:
+                            print(f"[history] Could not save report for project {save_to_project}: {e}")
+                yield f"data: {json.dumps(payload)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(event_source(), media_type="text/event-stream")
+
+@app.post("/swap")
+def swap(request: SwapRequest, _claims: dict = Depends(verify_token)) -> ClusterRecommendation:
+    """
+    Recomputes chemistry/risk for one cluster with a single character's
+    candidate substituted in, using the Roster from an earlier
+    RecommendationReport -- no agents, no ClickHouse, no Parallel calls, just
+    a deterministic recompute over data /recommend already produced. Requires
+    a Firebase ID token in the Authorization header, same as /recommend.
+    """
+    risk_by_name = {assessment.name: assessment for assessment in request.roster.risk_assessments}
+    try:
+        cluster = raphael.chemistry_engine.score_selection(
+            request.roster.casting_report, request.selections, request.reference_scores, risk_by_name
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return raphael.recommendation_engine.build_single(cluster, request.roster.risk_assessments)
+
+@app.post("/swap/preview")
+def swap_preview(request: SwapPreviewRequest, _claims: dict = Depends(verify_token)) -> SwapPreviewResponse:
+    """
+    Scores every other candidate in one character's shortlist as a
+    hypothetical swap, without committing to any of them -- so the frontend
+    can show each alternative's real chemistry delta and a per-co-star
+    breakdown before the user picks. Same deterministic recompute as /swap,
+    just over the whole shortlist instead of one chosen candidate. Requires
+    a Firebase ID token in the Authorization header, same as /recommend.
+    """
+    risk_by_name = {assessment.name: assessment for assessment in request.roster.risk_assessments}
+    previews = raphael.chemistry_engine.preview_swaps(
+        request.roster.casting_report, request.selections, request.character_name, request.excluded_leads, risk_by_name
+    )
+    return SwapPreviewResponse(previews=previews)

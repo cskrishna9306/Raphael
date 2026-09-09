@@ -33,11 +33,16 @@ class ParallelAbstractAgent(ABC):
         self.type = type
 
         # Initialize the LLM (GCP creds are picked up automatically via ADC)
+        # temperature=0 -- this agent's job (decide what to search, then
+        # summarize findings) should be as repeatable as the underlying
+        # search results allow; default sampling was an extra, controllable
+        # source of run-to-run variance on top of that.
         self.model = ChatGoogleGenerativeAI(
             model=config.MODEL_ID,
             vertexai=True,
             project=config.GOOGLE_CLOUD_PROJECT,
             location=config.GOOGLE_CLOUD_LOCATION,
+            temperature=0,
         )
 
         # Configure specialized parallel tools
