@@ -37,9 +37,48 @@
 
 .nav {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 22px;
   font-size: 12px;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 22px;
+  border-left: 2px dashed var(--color-border-dashed);
+}
+
+.avatar {
+  border-radius: 999px;
+  border: 2px solid var(--color-border-soft);
+  flex: none;
+}
+
+.accountName {
+  color: var(--color-text-faint);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signOut {
+  border: 2px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-panel-inset);
+  color: var(--color-text-faint);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.signOut:hover {
+  color: var(--color-text);
 }
 
 @media (max-width: 480px) {
@@ -49,6 +88,15 @@
 
   .nav {
     gap: 14px;
+  }
+
+  .account {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .accountName {
+    display: none;
   }
 }
 

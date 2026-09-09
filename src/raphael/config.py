@@ -18,6 +18,9 @@ class Config:
         self.HOST: str = os.getenv("HOST", "0.0.0.0")
         self.PORT: int = int(os.getenv("PORT", "8000"))
 
+        # GCP project whose Firebase ID tokens this API accepts
+        self.GOOGLE_CLOUD_PROJECT: str | None = os.getenv("GOOGLE_CLOUD_PROJECT")
+
         # Origins allowed to call this API cross-origin
         # Frontend's local dev server and, once deployed, its real origin
         self.ALLOWED_ORIGINS: list[str] = [

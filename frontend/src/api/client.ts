@@ -1,3 +1,4 @@
+import { auth } from "../firebase"
 import type { RecommendationReport, Screenplay } from "./types"
 
 const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000"
@@ -20,6 +21,19 @@ async function parseErrorMessage(response: Response): Promise<string> {
   } catch {
     return response.statusText || `Request failed with status ${response.status}`
   }
+}
+
+/**
+ * Builds the Authorization header the protected endpoints require. getIdToken
+ * hands back the cached ID token and refreshes it automatically once it is
+ * close to expiring, so callers never have to think about token lifetimes.
+ */
+async function authHeader(): Promise<Record<string, string>> {
+  const user = auth.currentUser
+  if (!user) {
+    throw new ApiError(401, "Your session has ended. Sign in again to continue.")
+  }
+  return { Authorization: `Bearer ${await user.getIdToken()}` }
 }
 
 /**
@@ -46,6 +60,7 @@ export async function analyzeScreenplay(file: File): Promise<Screenplay> {
 
   const response = await fetch(`${API_BASE_URL}/analyze`, {
     method: "POST",
+    headers: await authHeader(),
     body: formData,
   })
 
@@ -63,7 +78,7 @@ export async function analyzeScreenplay(file: File): Promise<Screenplay> {
 export async function recommendCast(screenplay: Screenplay): Promise<RecommendationReport> {
   const response = await fetch(`${API_BASE_URL}/recommend`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
     body: JSON.stringify(screenplay),
   })
 
