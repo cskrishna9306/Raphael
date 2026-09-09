@@ -38,6 +38,8 @@ def structuring_model(schema: type[BaseModel], model_id: str = config.MODEL_ID):
         project=config.GOOGLE_CLOUD_PROJECT,
         location=config.GOOGLE_CLOUD_LOCATION,
         temperature=0,
+        timeout=config.LLM_TIMEOUT_SECONDS,
+        max_retries=config.LLM_MAX_RETRIES,
     ).with_structured_output(schema)
 
 def character_query(character: CharacterProfile) -> str:

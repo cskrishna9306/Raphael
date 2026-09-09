@@ -34,6 +34,8 @@ class Raphael:
             vertexai=True,
             project=config.GOOGLE_CLOUD_PROJECT,
             location=config.GOOGLE_CLOUD_LOCATION,
+            timeout=config.LLM_TIMEOUT_SECONDS,
+            max_retries=config.LLM_MAX_RETRIES,
         )
 
         # Built once and reused across every run, same convention

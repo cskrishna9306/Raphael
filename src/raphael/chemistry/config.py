@@ -21,6 +21,12 @@ class Config:
         # so this bounds worst-case restart count for scripts with several lead characters
         self.MAX_LEAD_ANCHOR_COMBINATIONS: int = int(os.getenv("CHEMISTRY_MAX_LEAD_ANCHOR_COMBINATIONS", "200"))
 
+        # Caps the one-at-a-time anchored restarts search_clusters runs for non-lead roles
+        # (supporting/minor) -- grows additively with total candidates across those roles
+        # (not multiplicatively like the lead cartesian above), but still bounded for casts
+        # with many named characters
+        self.MAX_NON_LEAD_ANCHOR_RESTARTS: int = int(os.getenv("CHEMISTRY_MAX_NON_LEAD_ANCHOR_RESTARTS", "300"))
+
         # Relative weight of Adamic-Adar vs NPMI when combining into one edge weight
         self.ADAMIC_ADAR_WEIGHT: float = float(os.getenv("CHEMISTRY_ADAMIC_ADAR_WEIGHT", "1.0"))
 

@@ -50,6 +50,33 @@ class Config:
         # Set of supported documents that we can read
         self.SUPPORTED_EXTENSIONS: set[str] = (".txt", ".pdf")
 
+        # Bounds every Vertex AI chat call. Without an explicit timeout, a stalled
+        # connection (e.g. a transient network drop reaching Google's OAuth token
+        # endpoint) can hang far longer than a single request should before even
+        # attempting a retry.
+        self.LLM_TIMEOUT_SECONDS: float = float(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
+
+        # ChatGoogleGenerativeAI defaults to 6 retries with backoff -- reasonable in
+        # isolation, but combined with dozens of candidates fanning out concurrently
+        # (see MAX_CONCURRENT_CANDIDATES below), that default can turn one flaky
+        # connection into a very long wait before it's even reflected as a real
+        # failure. Trimmed down for a snappier, still-resilient interactive path.
+        self.LLM_MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "2"))
+
+        # ScreenplayBreakdownAgent consumes a whole document in one call (see its own
+        # NOTE above) rather than a handful of already-fetched search findings, so it
+        # gets a longer timeout than the general LLM_TIMEOUT_SECONDS above.
+        self.SCREENPLAY_BREAKDOWN_TIMEOUT_SECONDS: float = float(os.getenv("SCREENPLAY_BREAKDOWN_TIMEOUT_SECONDS", "120"))
+
+        # Caps how many candidates EnrichmentAgent/RiskManagementAgent/
+        # CastingDirectorAgent process at once (LangGraph's `max_concurrency` config).
+        # A large cast can otherwise fan out to dozens of simultaneous Vertex
+        # AI/Parallel/ClickHouse connections at once -- exactly the kind of
+        # self-inflicted load that turns a handful of real transient failures into a
+        # flood of them (seen live: a burst of "Connection pool is full" /
+        # OAuth-token connection-refused errors during a large-cast run).
+        self.MAX_CONCURRENT_CANDIDATES: int = int(os.getenv("MAX_CONCURRENT_CANDIDATES", "10"))
+
         return
 
 config = Config()

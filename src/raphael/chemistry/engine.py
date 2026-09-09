@@ -183,8 +183,9 @@ class ChemistryEngine:
         """
         Runs 1-swap local search with random restarts to find the top-scoring
         alternative casts, then picks the top clusters so they vary who plays
-        the lead role(s) rather than all converging on the same strongest
-        lead pairing with only supporting/ensemble picks differing.
+        *every* named role across clusters, not just the lead(s), rather than
+        all converging on the same strongest cast with only a handful of
+        roles differing.
         """
         characters = [casting.character for casting in report.castings]
         candidate_lists = [casting.candidates for casting in report.castings]
@@ -200,18 +201,18 @@ class ChemistryEngine:
             assignment, score = self._local_search(start, candidate_lists, context)
             found[tuple(assignment)] = score
 
-        # Anchored restarts: a free random start almost always climbs into the
-        # single strongest lead combination's basin of attraction, so unanchored
-        # restarts alone rarely surface a genuinely different combination (with 2+
-        # lead roles, even anchoring one lead at a time isn't enough -- the OTHER
-        # lead's hill-climb just settles back onto its own usual favorite, so a
-        # combination like (Ben=Idris, Barbara=Florence) can go entirely
-        # undiscovered even though each half was individually anchored). Anchor
-        # every combination of lead-role candidates *simultaneously* (fixing ALL
-        # lead positions at once, not just one) so every combination gets a
-        # genuine best-cast-around-them search. Capped and sampled if the full
-        # cartesian product would be large, since it grows multiplicatively with
-        # the number of lead roles.
+        # Anchored restarts, lead roles: a free random start almost always climbs
+        # into the single strongest lead combination's basin of attraction, so
+        # unanchored restarts alone rarely surface a genuinely different
+        # combination (with 2+ lead roles, even anchoring one lead at a time isn't
+        # enough -- the OTHER lead's hill-climb just settles back onto its own
+        # usual favorite, so a combination like (Ben=Idris, Barbara=Florence) can
+        # go entirely undiscovered even though each half was individually
+        # anchored). Anchor every combination of lead-role candidates
+        # *simultaneously* (fixing ALL lead positions at once, not just one) so
+        # every combination gets a genuine best-cast-around-them search. Capped
+        # and sampled if the full cartesian product would be large, since it
+        # grows multiplicatively with the number of lead roles.
         lead_positions = [i for i, character in enumerate(characters) if character.role_presence == RolePresence.LEAD]
         if lead_positions:
             combinations = list(itertools.product(*(range(len(candidate_lists[pos])) for pos in lead_positions)))
@@ -225,12 +226,45 @@ class ChemistryEngine:
                 assignment, score = self._local_search(start, candidate_lists, context, fixed=fixed)
                 found[tuple(assignment)] = score
 
+        # Anchored restarts, every other role (supporting/minor): the same
+        # "unanchored restarts converge on one favorite" problem applies here too
+        # -- without this, only leads ever varied across clusters, because only
+        # leads were ever anchored. A full cartesian like leads get would be
+        # combinatorially intractable once there are more than a couple of
+        # roles, so this anchors one position at a time instead: still
+        # guarantees every supporting/minor candidate gets a genuine
+        # best-cast-around-them search, just without the "every combination
+        # simultaneously" guarantee the (much smaller) lead cartesian gives.
+        # Capped and sampled if there are many named characters with many
+        # candidates each.
+        non_lead_positions = [i for i in range(len(characters)) if i not in lead_positions]
+        non_lead_anchors = [(pos, idx) for pos in non_lead_positions for idx in range(len(candidate_lists[pos]))]
+        if len(non_lead_anchors) > config.MAX_NON_LEAD_ANCHOR_RESTARTS:
+            non_lead_anchors = rng.sample(non_lead_anchors, config.MAX_NON_LEAD_ANCHOR_RESTARTS)
+        for position, idx in non_lead_anchors:
+            start = [rng.randrange(len(cands)) for cands in candidate_lists]
+            start[position] = idx
+            assignment, score = self._local_search(start, candidate_lists, context, fixed={position: idx})
+            found[tuple(assignment)] = score
+
+        # An anchor can force an impossible combination -- e.g. anchoring one
+        # position to the same actor who is some *other* position's only
+        # candidate leaves the hill-climb no way to escape a double-booking
+        # (neither position can swap away: one is fixed, the other has
+        # nothing else to swap to). _score_names already scores that -inf;
+        # drop those here so an invalid, double-cast assignment can never
+        # surface as a "cluster" regardless of how it was discovered -- fewer
+        # than NUM_CLUSTERS valid, distinct combinations is fine (see
+        # ChemistryReport.clusters), an invalid one is not.
+        found = {assignment: score for assignment, score in found.items() if score != float("-inf")}
+
         if not found:
             return []
 
         lo, hi = min(found.values()), max(found.values())
         ranked = sorted(found.items(), key=lambda kv: kv[1], reverse=True)
-        selected = self._diverse_top(ranked, lead_positions, candidate_lists, config.NUM_CLUSTERS)
+        diverse_positions = list(range(len(characters)))
+        selected = self._diverse_top(ranked, diverse_positions, candidate_lists, config.NUM_CLUSTERS)
 
         return [
             CastingCluster(
@@ -244,31 +278,31 @@ class ChemistryEngine:
             for assignment, score in selected
         ]
 
-    def _diverse_top(self, ranked: list[tuple[tuple, float]], lead_positions: list[int], candidate_lists, n: int) -> list[tuple[tuple, float]]:
+    def _diverse_top(self, ranked: list[tuple[tuple, float]], diverse_positions: list[int], candidate_lists, n: int) -> list[tuple[tuple, float]]:
         """
-        Picks up to n assignments so that no actor plays *any* lead role in
-        more than one selected cluster -- once someone is chosen as a lead
-        anywhere, they're fully excluded from seeding another cluster's
-        lead(s), not just from repeating the exact same lead combination
-        (a cluster reusing the same actor as a *different* lead role still
-        counts as a repeat). Falls back to the next-best score (reuse
-        allowed) only once there aren't enough lead-disjoint options left,
-        so this never returns fewer clusters than picking straight off
-        `ranked` would have.
+        Picks up to n assignments so that no actor plays any tracked role
+        (`diverse_positions` -- every named character, not just leads) in
+        more than one selected cluster -- once someone is cast anywhere,
+        they're fully excluded from seeding another cluster's cast, not just
+        from repeating the exact same combination (a cluster reusing the
+        same actor as a *different* character still counts as a repeat).
+        Falls back to the next-best score (reuse allowed) only once there
+        aren't enough fully-disjoint options left, so this never returns
+        fewer clusters than picking straight off `ranked` would have.
         """
-        if not lead_positions:
+        if not diverse_positions:
             return ranked[:n]
 
         selected: list[tuple[tuple, float]] = []
         leftover: list[tuple[tuple, float]] = []
-        used_lead_names: set[str] = set()
+        used_names: set[str] = set()
 
         for assignment, score in ranked:
-            lead_names = {candidate_lists[i][assignment[i]].name for i in lead_positions}
-            if lead_names & used_lead_names:
+            names = {candidate_lists[i][assignment[i]].name for i in diverse_positions}
+            if names & used_names:
                 leftover.append((assignment, score))
                 continue
-            used_lead_names |= lead_names
+            used_names |= names
             selected.append((assignment, score))
             if len(selected) == n:
                 return selected
@@ -358,7 +392,7 @@ class ChemistryEngine:
         casting_report: CastingReport,
         selections: list[CastingSelection],
         character_name: str,
-        excluded_leads: list[str] | None = None,
+        used_elsewhere: list[str] | None = None,
         risk_assessments: Optional[dict[str, RiskAssessment]] = None,
     ) -> list[SwapPreview]:
         """
@@ -374,15 +408,14 @@ class ChemistryEngine:
         (typically the Roster's) folds each alternate's own risk penalty into
         that same delta, consistent with build_graph/invoke.
 
-        `excluded_leads` (typically every lead actor already used in this
-        report's *other* clusters) is never dropped from the alternates
-        offered here -- with a small lead shortlist and several clusters
-        each maximizing lead diversity (see _diverse_top), a hard filter can
-        exhaust the entire shortlist and leave nothing to swap to at all.
-        Instead each such alternate is flagged `used_in_other_cluster=True`
-        (only when `character_name` is itself a LEAD role; non-lead roles
-        ignore this list entirely) so the frontend can surface it as a
-        soft warning and still let the user pick it deliberately.
+        `used_elsewhere` (typically every actor already cast in this report's
+        *other* clusters, across every role, not just leads) is never
+        dropped from the alternates offered here -- with a small shortlist
+        and several clusters each maximizing cast diversity (see
+        _diverse_top), a hard filter can exhaust the entire shortlist and
+        leave nothing to swap to at all. Instead each such alternate is
+        flagged `used_in_other_cluster=True` so the frontend can surface it
+        as a soft warning and still let the user pick it deliberately.
 
         Rebuilds the graph from `casting_report` -- cheap, pure computation
         over already-embedded dossiers, same as score_selection. Uses the
@@ -406,11 +439,15 @@ class ChemistryEngine:
 
         character_casting = next(casting for casting in casting_report.castings if casting.character.name == character_name)
         shortlist = character_casting.candidates
-        used_elsewhere = set(excluded_leads or []) if character_casting.character.role_presence == RolePresence.LEAD else set()
+        used_elsewhere_set = set(used_elsewhere or [])
 
         previews = []
         for alternate in shortlist:
-            if alternate.name == current_candidate_name:
+            # Skip the current pick (nothing to preview) and anyone already cast as a
+            # *different* character in this same cluster -- offering them would just
+            # double-book the cluster (score_selection would reject it outright; here,
+            # silently excluding it is more useful than showing a nonsensical -inf delta).
+            if alternate.name == current_candidate_name or alternate.name in other_names:
                 continue
 
             trial_selections = [
@@ -442,7 +479,7 @@ class ChemistryEngine:
                 delta=trial_score - current_score,
                 per_costar=per_costar,
                 estimated=not has_direct_evidence,
-                used_in_other_cluster=alternate.name in used_elsewhere,
+                used_in_other_cluster=alternate.name in used_elsewhere_set,
             ))
 
         previews.sort(key=lambda preview: preview.delta, reverse=True)
