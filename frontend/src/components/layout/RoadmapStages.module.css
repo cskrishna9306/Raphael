@@ -1,19 +1,25 @@
 .roadmap {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   list-style: none;
-  margin: 0;
-  padding: 6px 0 0;
+  /* Sized to its content and centred, rather than stretching the first stage
+     to fill the page and dragging the connector out with it. */
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-1) 0 0;
 }
 
 .stage {
+  flex: 1 1 0;
   min-width: 0;
 }
 
 .stageInner {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
   text-decoration: none;
   color: inherit;
 }
@@ -21,11 +27,15 @@
 .track {
   display: flex;
   align-items: center;
-  height: 14px;
-  margin-bottom: 5px;
+  width: 100%;
+  height: 12px;
+  margin-bottom: var(--space-2);
 }
 
-/* Connector rule running right from this stage's node to the next one. */
+/* A half-rule either side of the node. Consecutive stages' halves meet at the
+   boundary to form one continuous connector, and the node stays centred over
+   its own label. */
+.track::before,
 .track::after {
   content: "";
   flex: 1;
@@ -33,23 +43,26 @@
   background: var(--color-track);
 }
 
+.stage:first-child .track::before,
 .stage:last-child .track::after {
-  display: none;
+  visibility: hidden;
 }
 
-.stageAdvanced .track::after {
+/* The segment between two stages is completed only once the stage on its left
+   has been passed and the one on its right has been reached. */
+.stageAdvanced .track::after,
+.stageReached .track::before {
   background: var(--color-accent);
 }
 
 .node,
 .nodeReached {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   flex: none;
   border-radius: 999px;
-  border: 2px solid var(--color-border-soft);
+  border: 1px solid var(--color-border-soft);
   background: var(--color-bg);
-  margin-right: 10px;
 }
 
 .nodeReached {
@@ -64,9 +77,9 @@
 }
 
 .number {
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
   color: var(--color-text-faint);
 }
 
@@ -75,7 +88,8 @@
 }
 
 .label {
-  font-size: 14px;
+  font-family: var(--font-ui);
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text-faint);
 }
@@ -85,9 +99,10 @@
 }
 
 .body {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11.5px;
+  line-height: 1.45;
   color: var(--color-text-muted);
+  text-wrap: balance;
 }
 
 .stageInner:hover .label {
@@ -105,20 +120,11 @@
 }
 
 @media (max-width: 480px) {
-  .roadmap {
-    padding-top: 2px;
-  }
-
   .label {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .body {
     font-size: 11px;
-  }
-
-  .node,
-  .nodeReached {
-    margin-right: 8px;
   }
 }

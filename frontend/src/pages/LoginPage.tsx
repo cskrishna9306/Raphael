@@ -13,9 +13,11 @@ export function LoginPage() {
 
   if (initializing) return <div className={styles.page} aria-busy="true" />
 
-  // Send an already-signed-in user back to whichever page brought them here.
+  // Send an already-signed-in user back to whichever page brought them here,
+  // defaulting to ingest rather than "/" -- someone who just signed in wants
+  // the app, not the About page they came from.
   if (user) {
-    return <Navigate to={from ?? "/"} replace />
+    return <Navigate to={from ?? "/ingest"} replace />
   }
 
   function handleSkip() {

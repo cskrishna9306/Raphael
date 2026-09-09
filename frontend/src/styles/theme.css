@@ -1,27 +1,83 @@
 :root {
-  --color-bg: #0b0c0e;
-  --color-panel: #111214;
-  --color-panel-alt: #16181a;
-  --color-panel-inset: #191b1e;
-  --color-border: #4a4e55;
-  --color-border-soft: #3a3e44;
-  --color-border-dashed: #33373d;
-  --color-track: #24272b;
-  --color-track-alt: #26292e;
-  --color-text: #f2efe9;
-  --color-text-muted: #a9a399;
-  --color-text-faint: #8c877e;
-  --color-accent: #c8a24a;
-  --color-accent-ink: #111214;
-  --color-danger: #b4553f;
+  /* ---------------------------------------------------------------------
+     Palette -- "projection teal".
 
-  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+     Teal/orange is cinema's own grading convention, so the brand takes the
+     cool half and risk takes the warm half. That split is the rule the whole
+     interface leans on: the accent NEVER means "safe" or "good", and the risk
+     ramp is never used for emphasis. Colour therefore carries exactly one
+     meaning wherever it appears.
 
-  --shadow-panel: 8px 8px 0 rgba(0, 0, 0, 0.55);
-  --shadow-popover: 5px 5px 0 rgba(0, 0, 0, 0.55);
+     Neutrals carry a green-blue bias rather than being pure grey, so they sit
+     under the accent instead of fighting it.
+     --------------------------------------------------------------------- */
+  --color-bg: #0a0c0d;
+  --color-panel: #101315;
+  --color-panel-alt: #131719;
+  --color-panel-inset: #161a1c;
+
+  --color-border: #394245;
+  --color-border-soft: #262d30;
+  --color-border-dashed: #212729;
+  --color-track: #1e2426;
+  --color-track-alt: #232a2c;
+
+  --color-text: #ecefef;
+  --color-text-muted: #9aa3a4;
+  --color-text-faint: #7e8688;
+
+  --color-accent: #3fa9a0;
+  --color-accent-ink: #04100f;
+  --color-accent-dim: #2c7a74;
+  /* Tinted wash for selected/linked rows -- the accent at low alpha reads as
+     "related to what you're pointing at" without competing with real fills. */
+  --color-accent-wash: rgba(63, 169, 160, 0.12);
+
+  /* Severity, deliberately separate from --color-accent. Low is uncoloured on
+     purpose: a low-risk actor needs no attention, so it should not shout. */
+  --color-risk-low: #7e8688;
+  --color-risk-medium: #d99a3c;
+  --color-risk-high: #d2604a;
+  --color-danger: #d2604a;
+
+  /* ---------------------------------------------------------------------
+     Type -- three roles, not one face.
+
+     A text serif set at 9px with heavy tracking works against its own design;
+     Source Serif keeps the work it is good at (display sizes, actor names,
+     anything meant to be read as editorial) and hands the rest to a grotesque
+     and a mono.
+     --------------------------------------------------------------------- */
+  --font-display: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --font-ui: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Kept as an alias so nothing that still asks for the old name breaks. */
+  --font-serif: var(--font-display);
+
+  /* 4px base. Every padding/gap in the app snaps to one of these. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* ---------------------------------------------------------------------
+     Elevation by role, not one shadow stamped on everything: a hairline for
+     grouping, a border for things you can interact with, and real shadow
+     reserved for surfaces that genuinely float above the page.
+     --------------------------------------------------------------------- */
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.32);
+  --shadow-popover: 0 4px 10px rgba(0, 0, 0, 0.5), 0 16px 40px rgba(0, 0, 0, 0.45);
+  --shadow-accent: 0 0 0 1px var(--color-accent-dim), 0 6px 20px rgba(63, 169, 160, 0.18);
 
   /* Curved-corner scale -- sm for controls/tags, md for cards/rows, lg for top-level panels */
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-lg: 14px;
+
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+  --dur: 150ms;
 }

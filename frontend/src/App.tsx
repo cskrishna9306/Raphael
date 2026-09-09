@@ -1,6 +1,7 @@
-import { BrowserRouter, Outlet, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Navigate, Outlet, Routes, Route } from "react-router-dom"
 import { AuthProvider } from "./state/AuthContext"
-import { AppStateProvider } from "./state/AppStateContext"
+import { AppStateProvider, useAppState } from "./state/AppStateContext"
+import { HistoryProvider } from "./state/HistoryContext"
 import { AuthGate } from "./components/auth/AuthGate"
 import { AppShell } from "./components/layout/AppShell"
 import { LoginPage } from "./pages/LoginPage"
@@ -16,26 +17,51 @@ function ShellLayout() {
   )
 }
 
-// Signing in is optional (see src/raphael/auth.py's optional_claims), but the
-// sign-in page is still the first thing a fresh session sees -- AuthGate lets
-// anyone through once they've either signed in or explicitly skipped (see
-// LoginPage). After that, NavBar's "Sign in" link is the way back to /login.
+/**
+ * Keyed on sessionKey so that starting a new screenplay remounts the page,
+ * dropping the file and stage it was holding. Navigating here from /roster
+ * remounts anyway; this covers starting over while already on it.
+ */
+function IngestRoute() {
+  const { sessionKey } = useAppState()
+  return <IngestPage key={sessionKey} />
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <AppStateProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route element={<AuthGate />}>
+        <HistoryProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              {/*
+                The landing page is ungated: someone should be able to read what
+                Raphael does before being asked to sign in, and the nav bar's
+                sign-in tab is right there when they want it.
+              */}
               <Route element={<ShellLayout />}>
-                <Route path="/" element={<IngestPage />} />
-                <Route path="/roster" element={<RosterPage />} />
-                <Route path="/about" element={<AboutPage />} />
+                <Route path="/" element={<AboutPage />} />
+                {/* Kept so existing links and bookmarks to /about still land. */}
+                <Route path="/about" element={<Navigate to="/" replace />} />
               </Route>
-            </Route>
-          </Routes>
-        </BrowserRouter>
+              {/*
+                The pipeline pages sit behind AuthGate, which prompts for
+                sign-in but lets anyone through once they sign in or skip --
+                signing in is optional (see src/raphael/auth.py's
+                optional_claims). The gate wraps the shell rather than sitting
+                inside it, so the nav, roadmap and history rail never flash up
+                for a visitor who is about to be redirected.
+              */}
+              <Route element={<AuthGate />}>
+                <Route element={<ShellLayout />}>
+                  <Route path="/ingest" element={<IngestRoute />} />
+                  <Route path="/roster" element={<RosterPage />} />
+                </Route>
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </HistoryProvider>
       </AppStateProvider>
     </AuthProvider>
   )

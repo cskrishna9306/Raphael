@@ -1,13 +1,11 @@
+/* A crossed-out box reads as a broken image. This is a quiet headshot
+   silhouette instead, so a missing photo looks intentional rather than failed. */
 .placeholder {
   flex: none;
-  border: 2px solid var(--color-border-soft);
-  border-radius: var(--radius-md);
-  background: var(--color-panel-alt);
-  background-image: linear-gradient(
-      to bottom right,
-      transparent calc(50% - 1px),
-      var(--color-track) 50%,
-      transparent calc(50% + 1px)
-    ),
-    linear-gradient(to bottom left, transparent calc(50% - 1px), var(--color-track) 50%, transparent calc(50% + 1px));
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(ellipse 62% 34% at 50% 104%, var(--color-track-alt) 0 99%, transparent 100%),
+    radial-gradient(circle at 50% 36%, var(--color-track-alt) 0 21%, transparent 22%),
+    var(--color-track);
 }

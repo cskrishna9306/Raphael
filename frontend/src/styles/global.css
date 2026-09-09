@@ -14,7 +14,11 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: var(--font-serif);
+  /* The grotesque is the default; the serif is opted into for display copy
+     and actor names, rather than being the thing everything inherits. */
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -26,3 +30,27 @@ button {
   font-family: inherit;
 }
 
+/* Digits that sit in columns -- scores, counts, cluster indices -- shouldn't
+   jitter between rows. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* One rule gives every control a keyboard-visible state. Nothing in the app
+   had one before. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

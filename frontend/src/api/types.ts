@@ -134,6 +134,26 @@ export interface RecommendationReport {
   roster: Roster
 }
 
+// -- /projects (per-user history) -----------------------------------------
+
+/** One row of the history list -- deliberately without the report, which the list never renders. */
+export interface ProjectSummary {
+  id: string
+  title: string
+  character_count: number
+  has_report: boolean
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface Project {
+  id: string
+  title: string
+  screenplay: Screenplay
+  latest_report?: RecommendationReport | null
+  created_at?: string | null
+  updated_at?: string | null
+}
 // -- /swap request ----------------------------------------------------------
 
 export interface SwapRequest {

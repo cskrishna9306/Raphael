@@ -1,0 +1,124 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-border-dashed);
+  border-bottom: 1px solid var(--color-border-dashed);
+  padding: var(--space-3) 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statValue {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-track);
+  gap: 2px;
+}
+
+/* One accent, stepped down in opacity by weight -- the tiers are one quantity
+   at different intensities, not five unrelated categories. */
+.lead {
+  background: var(--color-accent);
+}
+
+.supporting {
+  background: var(--color-accent-dim);
+}
+
+.minor {
+  background: #24565a;
+}
+
+.background,
+.extra {
+  background: var(--color-track-alt);
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.legendLabel {
+  color: var(--color-text-muted);
+}
+
+.legendCount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
