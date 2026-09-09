@@ -171,8 +171,8 @@ export interface SwapPreviewRequest {
   /** The cluster's current selections (one per character) to preview alternatives against. */
   selections: CastingSelection[]
   character_name: string
-  /** Lead actors already used in this report's other clusters -- flags (never filters) alternates when character_name is itself a lead role. */
-  excluded_leads: string[]
+  /** Actors already cast in this report's other clusters, across every role -- flags (never filters) matching alternates via SwapPreview.used_in_other_cluster. */
+  used_elsewhere: string[]
 }
 
 export interface SwapPreviewResponse {

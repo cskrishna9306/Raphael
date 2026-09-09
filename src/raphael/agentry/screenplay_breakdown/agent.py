@@ -25,12 +25,16 @@ class ScreenplayBreakdownAgent:
         # Define this agent's system prompt
         self.system_prompt = PROMPT_PATH.read_text()
 
-        # Initialize the LLM (GCP creds are picked up automatically via ADC)
+        # Initialize the LLM (GCP creds are picked up automatically via ADC).
+        # Longer timeout than other agents' -- this call consumes a whole
+        # screenplay document, not a handful of already-fetched search findings.
         self.model = ChatGoogleGenerativeAI(
             model=model_id or config.SCREENPLAY_BREAKDOWN_MODEL_ID,
             vertexai=True,
             project=config.GOOGLE_CLOUD_PROJECT,
             location=config.GOOGLE_CLOUD_LOCATION,
+            timeout=config.SCREENPLAY_BREAKDOWN_TIMEOUT_SECONDS,
+            max_retries=config.LLM_MAX_RETRIES,
         )
 
         # Constrain the model to always respond with a Screenplay object

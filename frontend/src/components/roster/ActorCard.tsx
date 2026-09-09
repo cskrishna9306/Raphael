@@ -157,7 +157,7 @@ export function ActorCard({ selection, risk, alternates, riskAssessments, swappi
                         ))}
                         {preview.estimated ? <span className={styles.estimatedNote}>* no shared-credit history with this cast -- estimated</span> : null}
                         {preview.used_in_other_cluster ? (
-                          <span className={styles.estimatedNote}>⚠ already leads another cluster</span>
+                          <span className={styles.estimatedNote}>⚠ already cast in another cluster</span>
                         ) : null}
                       </div>
                     ) : null}

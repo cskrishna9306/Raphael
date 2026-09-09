@@ -134,5 +134,8 @@ class RiskManagementAgent:
         """
         Asynchronously runs the risk_management graph for a casting report.
         """
-        result = await self.graph.ainvoke({"casting_report": casting_report, "assessments": []})
+        result = await self.graph.ainvoke(
+            {"casting_report": casting_report, "assessments": []},
+            config={"max_concurrency": config.MAX_CONCURRENT_CANDIDATES},
+        )
         return result["report"]

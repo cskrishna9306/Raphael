@@ -16,6 +16,35 @@ from src.raphael.agentry.parallel.models import (
     PersonDossier,
 )
 
+class _TurboParallelSearchTool(ParallelSearchTool):
+    """
+    ParallelSearchTool with `mode` pinned to "turbo", regardless of what the
+    LLM's tool call requests.
+
+    casting_director, risk_management, and enrichment's PersonSearchAgent all
+    use this for single-hop "does this real person/fact match" lookups, not
+    the multi-hop background research the pricier tiers are meant for -- and
+    left unset, the search API defaults to "advanced". "basic" and
+    "advanced" are priced identically ($5/1000 requests); "turbo" is 5x
+    cheaper ($1/1000). Parallel's pricing page also lists a "fast" tier at
+    the same price, but the installed langchain-parallel SDK's `mode` enum
+    only accepts "turbo"/"basic"/"advanced" -- "fast" is a removed legacy
+    value the SDK now remaps to "basic" (confirmed by hitting exactly that
+    ValueError), so "turbo" is the actual reachable cheap tier here, not a
+    stand-in for it. See https://parallel.ai/pricing. Forced here rather
+    than left to the model's tool-call discretion so the saving is
+    guaranteed, not just likely.
+    """
+
+    async def _arun(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        kwargs["mode"] = "turbo"
+        return await super()._arun(*args, **kwargs)
+
+    def _run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        kwargs["mode"] = "turbo"
+        return super()._run(*args, **kwargs)
+
+
 class ParallelAbstractAgent(ABC):
     """
     Models a generic agent specializing in using Parallel.
@@ -43,17 +72,19 @@ class ParallelAbstractAgent(ABC):
             project=config.GOOGLE_CLOUD_PROJECT,
             location=config.GOOGLE_CLOUD_LOCATION,
             temperature=0,
+            timeout=config.LLM_TIMEOUT_SECONDS,
+            max_retries=config.LLM_MAX_RETRIES,
         )
 
         # Configure specialized parallel tools
         if self.type == ParallelAgentType.SEARCH:
-            self.tools = [ParallelSearchTool()]
+            self.tools = [_TurboParallelSearchTool()]
         elif self.type == ParallelAgentType.EXTRACT:
             self.tools = [ParallelExtractTool()]
         elif self.type == ParallelAgentType.RESEARCH:
             self.tools = [ParallelTaskRunTool(processor="pro-fast", task_output_schema=PersonDossier)]
         else:
-            self.tools = [ParallelSearchTool()]
+            self.tools = [_TurboParallelSearchTool()]
 
 
         # Create the agent executor using LangGraph

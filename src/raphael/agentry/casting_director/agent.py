@@ -236,7 +236,10 @@ class CastingDirectorAgent:
         """
         Asynchronously runs the casting_director graph for a screenplay.
         """
-        result = await self.graph.ainvoke({"screenplay": screenplay, "castings": []})
+        result = await self.graph.ainvoke(
+            {"screenplay": screenplay, "castings": []},
+            config={"max_concurrency": config.MAX_CONCURRENT_CANDIDATES},
+        )
         return result["report"]
 
     async def astream_progress(self, screenplay: Screenplay) -> AsyncIterator[dict]:
@@ -254,7 +257,11 @@ class CastingDirectorAgent:
         completed = 0
         castings: list[CastingCharacter] = []
 
-        async for update in self.graph.astream({"screenplay": screenplay, "castings": []}, stream_mode="updates"):
+        async for update in self.graph.astream(
+            {"screenplay": screenplay, "castings": []},
+            config={"max_concurrency": config.MAX_CONCURRENT_CANDIDATES},
+            stream_mode="updates",
+        ):
             node_output = update.get("search_candidates")
             if node_output is None:
                 continue
