@@ -53,6 +53,18 @@ export function IngestPage() {
     })
   }
 
+  function handlePreferredActorChange(characterName: string, preferredActor: string | null) {
+    if (!screenplay) return
+    setScreenplay({
+      ...screenplay,
+      cast: {
+        characters: screenplay.cast.characters.map((character) =>
+          character.name === characterName ? { ...character, preferred_actor: preferredActor } : character,
+        ),
+      },
+    })
+  }
+
   async function handleRunCastingAnalysis() {
     if (!screenplay) return
     setStage("recommending")
@@ -126,11 +138,12 @@ export function IngestPage() {
                   </div>
                   <div className={styles.charactersHeader}>
                     <span>Characters detected — {screenplay.cast.characters.length}</span>
-                    <span className={styles.charactersHint}>edit a row's role before casting</span>
+                    <span className={styles.charactersHint}>edit a role or cast a specific actor before casting</span>
                   </div>
                   <CharacterList
                     characters={screenplay.cast.characters}
                     onRoleChange={handleRoleChange}
+                    onPreferredActorChange={handlePreferredActorChange}
                     disabled={isBusy}
                   />
                   <Button
