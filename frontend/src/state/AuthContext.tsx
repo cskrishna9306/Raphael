@@ -7,11 +7,19 @@ interface AuthState {
   /** True until Firebase has restored (or ruled out) a persisted session. */
   initializing: boolean
   error: string | null
+  /** True once the user has explicitly chosen to continue without signing in, for this browser session. */
+  skipped: boolean
   signIn: () => Promise<void>
   signOut: () => Promise<void>
+  skipSignIn: () => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
+
+// sessionStorage (not localStorage) on purpose: the sign-in page should greet
+// every fresh session, but shouldn't nag again once someone's already chosen
+// to skip it within the current tab/browser session.
+const SKIP_KEY = "raphael:skippedSignIn"
 
 // Closing the Google popup, or opening a second one, is a normal user action
 // rather than a failure -- neither should surface an error in the UI.
@@ -29,13 +37,19 @@ function describeAuthError(error: unknown): string | null {
  * Tracks the signed-in Google account for the whole app. Firebase persists the
  * session in browser storage and refreshes ID tokens on its own, so this only
  * has to mirror `onAuthStateChanged` into React state.
+ *
+ * `auth` (from ../firebase) is null when Firebase isn't configured for this
+ * deployment -- signing in is optional, so that must degrade to "sign-in
+ * unavailable" here, not crash the app that imports this provider.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [initializing, setInitializing] = useState(true)
+  const [initializing, setInitializing] = useState(auth !== null)
   const [error, setError] = useState<string | null>(null)
+  const [skipped, setSkipped] = useState(() => sessionStorage.getItem(SKIP_KEY) === "1")
 
   useEffect(() => {
+    if (!auth) return
     return onAuthStateChanged(auth, (nextUser) => {
       setUser(nextUser)
       setInitializing(false)
@@ -47,8 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       initializing,
       error,
+      skipped,
       signIn: async () => {
         setError(null)
+        if (!auth) {
+          setError("Sign-in isn't configured for this deployment. You can still use Raphael without an account.")
+          return
+        }
         try {
           await signInWithPopup(auth, googleProvider)
         } catch (caught) {
@@ -57,10 +76,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       signOut: async () => {
         setError(null)
+        // A signed-out user should see the sign-in-or-skip choice again, same as a fresh session.
+        sessionStorage.removeItem(SKIP_KEY)
+        setSkipped(false)
+        if (!auth) return
         await firebaseSignOut(auth)
       },
+      skipSignIn: () => {
+        sessionStorage.setItem(SKIP_KEY, "1")
+        setSkipped(true)
+      },
     }),
-    [user, initializing, error],
+    [user, initializing, error, skipped],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

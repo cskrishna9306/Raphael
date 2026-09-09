@@ -32,14 +32,19 @@ async function parseErrorMessage(response: Response): Promise<string> {
 }
 
 /**
- * Builds the Authorization header the protected endpoints require. getIdToken
- * hands back the cached ID token and refreshes it automatically once it is
- * close to expiring, so callers never have to think about token lifetimes.
+ * Builds the Authorization header for the signed-in user, if any. Signing in
+ * is optional -- an anonymous caller gets an empty header and the backend
+ * treats the request as anonymous rather than rejecting it (see
+ * optional_claims). getIdToken hands back the cached ID token and refreshes
+ * it automatically once it is close to expiring, so callers never have to
+ * think about token lifetimes.
  */
 async function authHeader(): Promise<Record<string, string>> {
-  const user = auth.currentUser
+  // auth is null when Firebase isn't configured for this deployment -- sign-in is
+  // optional, so that's just another way to end up with no signed-in user.
+  const user = auth?.currentUser
   if (!user) {
-    throw new ApiError(401, "Your session has ended. Sign in again to continue.")
+    return {}
   }
   return { Authorization: `Bearer ${await user.getIdToken()}` }
 }
