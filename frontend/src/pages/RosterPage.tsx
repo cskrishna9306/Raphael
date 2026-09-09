@@ -9,6 +9,7 @@ import { Button } from "../components/common/Button"
 import { ErrorBanner } from "../components/common/ErrorBanner"
 import { ClusterTabs } from "../components/roster/ClusterTabs"
 import { ClusterSummaryPanel, type SwapDelta } from "../components/roster/ClusterSummaryPanel"
+import { EnsembleGraph } from "../components/roster/EnsembleGraph"
 import { FormationSection } from "../components/roster/FormationSection"
 import { groupSelectionsByStoryWeight } from "../utils/rosterGrouping"
 import { downloadReportAsJson } from "../utils/exportReport"
@@ -17,6 +18,9 @@ import styles from "./RosterPage.module.css"
 export function RosterPage() {
   const { report, updateRecommendation } = useAppState()
   const [activeIndex, setActiveIndex] = useState(0)
+  // One actor name, shared by the cast cards, the risk register and the graph,
+  // so pointing at any of the three highlights the same person in all of them.
+  const [linkedName, setLinkedName] = useState<string | null>(null)
   const [swappingCharacter, setSwappingCharacter] = useState<string | null>(null)
   const [swapError, setSwapError] = useState<string | null>(null)
   const [swapDelta, setSwapDelta] = useState<SwapDelta | null>(null)
@@ -25,7 +29,7 @@ export function RosterPage() {
     return (
       <EmptyState title="No roster yet">
         <p>Run a screenplay through the ingest flow to get ranked cast clusters here.</p>
-        <Link to="/">
+        <Link to="/ingest">
           <Button variant="primary">Go to Ingest →</Button>
         </Link>
       </EmptyState>
@@ -34,6 +38,7 @@ export function RosterPage() {
 
   const recommendation = report.recommendations[Math.min(activeIndex, report.recommendations.length - 1)]
   const buckets = groupSelectionsByStoryWeight(recommendation.cluster.selections)
+  const allScores = report.recommendations.map((entry) => entry.cluster.chemistry_score)
 
   const handleSelectTab = (index: number) => {
     setActiveIndex(index)
@@ -82,11 +87,15 @@ export function RosterPage() {
 
   return (
     <Panel className={styles.panel}>
-      <ClusterTabs recommendations={report.recommendations} activeIndex={activeIndex} onSelect={handleSelectTab} />
-      <div className={styles.actionsRow}>
-        <Button onClick={() => downloadReportAsJson(report)}>Export sheet</Button>
-      </div>
+      <ClusterTabs
+        recommendations={report.recommendations}
+        activeIndex={activeIndex}
+        onSelect={handleSelectTab}
+        actions={<Button onClick={() => downloadReportAsJson(report)}>Export sheet</Button>}
+      />
       {swapError ? <ErrorBanner message={swapError} /> : null}
+
+
       <div className={styles.body}>
         <div className={styles.tree}>
           {buckets.map(([bucket, selections]) => (
@@ -99,13 +108,30 @@ export function RosterPage() {
               swappingCharacter={swappingCharacter}
               onSwap={handleSwap}
               onPreview={handlePreview}
+              linkedName={linkedName}
+              onLinkChange={setLinkedName}
             />
           ))}
+
+          <EnsembleGraph
+            selections={recommendation.cluster.selections}
+            linkedName={linkedName}
+            onLinkChange={setLinkedName}
+          />
         </div>
+
         <ClusterSummaryPanel
           recommendation={recommendation}
           rank={activeIndex}
-          swapDelta={swapDelta?.characterName && recommendation.cluster.selections.some((s) => s.character.name === swapDelta.characterName) ? swapDelta : null}
+          allScores={allScores}
+          swapDelta={
+            swapDelta?.characterName &&
+            recommendation.cluster.selections.some((s) => s.character.name === swapDelta.characterName)
+              ? swapDelta
+              : null
+          }
+          linkedName={linkedName}
+          onLinkChange={setLinkedName}
         />
       </div>
     </Panel>

@@ -12,9 +12,10 @@ from src.raphael.config import config
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
-def _firebase_app() -> firebase_admin.App:
+def firebase_app() -> firebase_admin.App:
     """
     Returns the process-wide firebase_admin app, initializing it on first use.
+    Shared by token verification and the Firestore client behind /projects.
     """
 
     # Initialized lazily rather than at import time so that importing this
@@ -31,7 +32,7 @@ def _decode_token(credentials: HTTPAuthorizationCredentials) -> dict:
     # Declared sync so FastAPI runs it in a threadpool -- verify_id_token
     # blocks on a (cached) fetch of Google's public signing keys.
     try:
-        return firebase_auth.verify_id_token(credentials.credentials, app=_firebase_app())
+        return firebase_auth.verify_id_token(credentials.credentials, app=firebase_app())
     except (ValueError, firebase_auth.InvalidIdTokenError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

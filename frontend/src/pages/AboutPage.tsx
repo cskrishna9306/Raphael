@@ -94,7 +94,8 @@ export function AboutPage() {
           <div className={styles.label}>Built at</div>
           <div className={styles.footerCopy}>A hackathon project. Recommendations are decision support, not a shortlist to sign.</div>
         </div>
-        <Link to="/">
+        {/* Signed-out visitors get bounced to /login and returned here after. */}
+        <Link to="/ingest">
           <Button variant="primary">Try it on a script →</Button>
         </Link>
       </div>
