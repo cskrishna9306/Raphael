@@ -225,4 +225,3 @@ keys/
 
 # Firebase CLI local deploy cache
 .firebase/
-cloudrun.env
